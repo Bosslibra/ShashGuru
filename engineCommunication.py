@@ -8,9 +8,6 @@ engine_path = f".\executables\{engine_name}" if os.name == 'nt' else f"./executa
 
 
 # Takes a uci command as input and sends it to the engine
-def send_command(cmd):
-    engine.stdin.write(cmd + '\n')
-    engine.stdin.flush()
 
 def call_engine(fen, depth):
     engine = subprocess.Popen([engine_path], # Change relative path here, or if your engine is in PATH, only write the name 
@@ -19,17 +16,19 @@ def call_engine(fen, depth):
                         stderr=subprocess.PIPE,
                         universal_newlines=True)
     #1. Initializing the engine
-    send_command('uci')
-    send_command('isready')
+    engine.stdin.write('uci\n')
+    engine.stdin.flush()
+    engine.stdin.write('isready\n')
+    engine.stdin.flush()
     print("Engine is ready!\n")
 
-    #2. Get the game position
-    print("Paste your FEN here:")
-    
-    send_command(f"position fen {fen}")
+    #2. Set the game position
+    engine.stdin.write(f'position fen {fen}\n')
+    engine.stdin.flush()
 
-    #3. Starting the engine and capturing bestmove
-    send_command(f"go depth {depth}")
+    #3. Starting search and capturing bestmove
+    engine.stdin.write(f'go depth {depth}\n')
+    engine.stdin.flush()
     print("Thinking...\n")
     while True:
         output = engine.stdout.readline().strip()
