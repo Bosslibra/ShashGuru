@@ -2,7 +2,7 @@ import subprocess
 import os
 
 engine_name = 'shashchess'
-engine_path = f".\executables\{engine_name}" if os.name == 'nt' else f"./executables/{engine_name}"
+engine_path = f".\executables\{engine_name}.exe" if os.name == 'nt' else f"./executables/{engine_name}"
 
 #0. Creates pipeline with the engine
 
