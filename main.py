@@ -8,7 +8,7 @@ from colorama import Fore, Style
 print("Welcome to ChessAnalyzer!\n")
 
 #1. Input collection
-print("Paste your FEN here:")
+print("Paste your FEN here:") #starting position FEN for debug porpouses: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 fen = input().strip()
 print("Please specify the search depth number:")
 depth = input().strip()
