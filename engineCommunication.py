@@ -20,7 +20,6 @@ def call_engine(fen, depth):
     engine.stdin.flush()
     engine.stdin.write('isready\n')
     engine.stdin.flush()
-    print("Engine is ready!\n")
 
     #2. Set the game position
     engine.stdin.write(f'position fen {fen}\n')
@@ -29,7 +28,7 @@ def call_engine(fen, depth):
     #3. Starting search and capturing bestmove
     engine.stdin.write(f'go depth {depth}\n')
     engine.stdin.flush()
-    print("Thinking...\n")
+    print("\nThinking...\n")
     while True:
         output = engine.stdout.readline().strip()
         if output.startswith("bestmove"):
