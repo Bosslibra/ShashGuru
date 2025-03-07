@@ -41,7 +41,10 @@ def create_prompt(fen, bestmove):
 
 def query_LLM(prompt, tokenizer, model):
     pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, device_map="auto")
-    messages = [{"role": "user", "content": prompt}]
+    messages = [
+        {"role": "system", "content": "You are an AI chess analyzer. You should answer in a concise manner, without filler text. Unless instructed otherwise, respond in the same language as the user's query."},
+        {"role": "user", "content": prompt}
+    ]
     output = pipe(messages, max_new_tokens=256)
     analysis = output[0]["generated_text"][-1]["content"]
     return analysis

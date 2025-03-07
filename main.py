@@ -24,9 +24,15 @@ print(f"The best move found by the engine is: {bestmove}\n")
 #3. LLM interaction
 prompt = create_prompt(fen, bestmove)
 analysis = query_LLM(prompt, tokenizer, model)
-print("" + analysis)
+print("" + analysis + "\n")
 
-
+#4. Continuous Chat
+while True:
+    new_question = input().strip()
+    if new_question == ("exit" or "quit"):
+        break
+    answer = query_LLM(new_question, tokenizer, model)
+    print(answer)
 
 # Footer
 print("\n\nThank you for using our ChessAnalyzer.")
