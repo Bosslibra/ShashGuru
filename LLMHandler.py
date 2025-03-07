@@ -39,16 +39,41 @@ def create_prompt(fen, bestmove):
     Can you please explain why is this move good? Answer without filler text, in a concise manner'''
     return prompt
 
-def query_LLM(prompt, tokenizer, model):
+def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=5):
     pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, device_map="auto")
-    messages = [{"role": "user", "content": prompt}]
+    
+    if chat_history is None:
+        chat_history = []
+    chat_history = chat_history[-max_history:]
+    
+    messages = [
+        {"role": "system", "content": '''You are an AI chess analyzer.
+            You should answer in a concise manner, without filler text.
+            Unless instructed otherwise, respond in the same language as the user's query.
+            Only answer about chess, no other topic should be discussed.
+            '''}
+    ] + chat_history + [
+        {"role": "user", "content": prompt}
+    ]
     output = pipe(messages, max_new_tokens=256)
     analysis = output[0]["generated_text"][-1]["content"]
-    return analysis
 
+    chat_history.append({"role": "user", "content": prompt})
+    chat_history.append({"role": "assistant", "content": analysis})
 
+    return analysis, chat_history
 
-
-prompt = create_prompt('8/5ppk/6p1/R7/P7/7P/2r3PK/8 w - - 1 36', "a5a6")
-
-
+def is_chess_related(question, tokenizer, model):
+    pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, device_map="auto")
+    messages = [
+        {"role": "system", "content": '''You are a filtering agent.
+            Your job is to decide if the text is chess-related.
+            Keep context in mind.
+            Only answer with a "yes" or a "no".
+            '''},
+        {"role": "user", "content": question + "Is this question chess-related?"}
+    ]
+    output = pipe(messages, max_new_tokens=256)
+    response = output[0]["generated_text"][-1]["content"].strip().lower()
+    
+    return response in ["yes", "yes."]
