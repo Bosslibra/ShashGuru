@@ -12,10 +12,9 @@ tokenizer, model = load_LLM_model()
 print("Model loaded.\n")
 
 #1. Input collection
-print("Paste your FEN here:") #starting position FEN for debug porpouses: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-fen = input().strip()
-print("Please specify the search depth number:")
-depth = input().strip()
+# Starting position FEN for debug porpouses: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+fen = input("Paste your FEN here:\n").strip()
+depth = input("Please specify the search depth number:\n").strip()
 
 #2. Engine call
 bestmove = call_engine(fen, depth)
@@ -29,7 +28,7 @@ print("AI:", analysis,"\n")
 #4. Continuous Chat
 while True:
     new_question = input("You: ").strip().lower()
-    if new_question == ("exit" or "quit"):
+    if new_question in {"exit" or "quit"}:
         break
     # Filter chess questions
     related = is_chess_related(new_question, tokenizer, model)
