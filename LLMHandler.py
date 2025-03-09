@@ -38,11 +38,14 @@ def load_LLM_model():
 
 
 
-def create_prompt(fen, bestmove):
+def create_prompt(fen, bestmoves, ponder):
     explainedFEN = fen_explainer(fen)
     #I have the following fen {fen} and m
-    prompt = f'''My chess engine suggests the move {bestmove} (expressed in uci standard).
-    Can you please explain why is this move good? Answer without filler text, in a concise manner'''
+    prompt = f'''My chess engine suggests the best move {bestmoves[0]} (expressed in uci standard).
+    {"" if ponder == None else f"The engine expects that this best move will be met by {ponder} on the next move."}
+    Please also consider, without speaking about them, that the engine consideres other 3 good moves, which are the following:
+    {bestmoves[1:]}
+    Can you please explain why is the best move good? Answer without filler text, in a concise manner'''
     prompt = "I will explain the board situation:\n" + explainedFEN + prompt
     return prompt
 
@@ -55,7 +58,7 @@ def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=5):
     
     messages = [
         {"role": "system", "content": '''You are an AI chess analyzer.
-            You should answer in a concise manner, without filler text. If you talk about a move, cite which piece is moved.
+            You should answer in a concise manner, without filler text.
             Unless instructed otherwise, respond in the same language as the user's query.
             Only answer about chess, no other topic should be discussed.
             '''}
