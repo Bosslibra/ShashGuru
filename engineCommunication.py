@@ -37,7 +37,6 @@ def call_engine(fen, depth):
         # Saving principal variations for follow up questions
         if output.startswith(f"info depth {depth}") and "multipv" in output:
             output_split = output.split()
-            print(output_split)
             i = int(output_split.index("multipv")) + 1
             pv = int(output_split.index("pv")) + 1
             bestmoves.insert(int(output_split[i])-1, output_split[pv]) # moves will be added in order of how strong they are
@@ -47,6 +46,5 @@ def call_engine(fen, depth):
             ponder = None
             if len(output_split) > 2:
                 ponder = output_split[3]
-            print(bestmoves)
             return bestmoves, ponder
         
