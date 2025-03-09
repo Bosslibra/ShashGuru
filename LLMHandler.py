@@ -51,7 +51,7 @@ def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=5):
     
     messages = [
         {"role": "system", "content": '''You are an AI chess analyzer.
-            You should answer in a concise manner, without filler text.
+            You should answer in a concise manner, without filler text. If you talk about a move, cite which piece is moved.
             Unless instructed otherwise, respond in the same language as the user's query.
             Only answer about chess, no other topic should be discussed.
             '''}
