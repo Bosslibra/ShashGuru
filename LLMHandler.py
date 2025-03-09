@@ -34,9 +34,12 @@ def load_LLM_model():
     return (tokenizer, model)
 
 
-def create_prompt(fen, bestmove):
-    prompt = f'''I have the following fen {fen} and my chess engine suggests the move {bestmove} (expressed in uci standard).
-    Can you please explain why is this move good? Answer without filler text, in a concise manner'''
+def create_prompt(fen, bestmoves, ponder=None):
+    prompt = f'''I have the following fen {fen} and my chess engine suggests the best move {bestmoves[0]} (expressed in uci standard).
+    {"" if ponder == None else f"The engine expects that this best move will be met by {ponder} on the next move."}
+    Please also consider, without speaking about them, that the engine consideres other 3 good moves, which are the following:
+    {bestmoves[1:]}
+    Can you please explain why is the best move good? Answer without filler text, in a concise manner'''
     return prompt
 
 def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=5):

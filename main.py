@@ -17,11 +17,11 @@ fen = input("Paste your FEN here:\n").strip()
 depth = input("Please specify the search depth number:\n").strip()
 
 #2. Engine call
-bestmove = call_engine(fen, depth)
-print(f"The best move found by the engine is: {bestmove}\n")
+bestmoves, ponder = call_engine(fen, depth)
+print(f"The best move found by the engine is: {bestmoves[0]}\n")
 
 #3. LLM interaction
-prompt = create_prompt(fen, bestmove)
+prompt = create_prompt(fen, bestmoves, ponder)
 analysis, chat_history = query_LLM(prompt, tokenizer, model)
 print("AI:", analysis,"\n")
 
