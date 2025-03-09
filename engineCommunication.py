@@ -26,11 +26,25 @@ def call_engine(fen, depth):
     engine.stdin.flush()
 
     #3. Starting search and capturing bestmove
+    engine.stdin.write(f'setoption name MultiPV value 3\n')
+    engine.stdin.flush()
     engine.stdin.write(f'go depth {depth}\n')
     engine.stdin.flush()
     print("\nThinking...\n")
+    bestmoves=[]
     while True:
         output = engine.stdout.readline().strip()
-        if output.startswith("bestmove"):
-            bestmove = output.split()[1]
-            return bestmove
+        # Saving principal variations for follow up questions
+        if output.startswith(f"info depth {depth}") and "multipv" in output:
+            output_split = output.split()
+            i = int(output_split.index("multipv")) + 1
+            pv = int(output_split.index("pv")) + 1
+            bestmoves.insert(int(output_split[i])-1, output_split[pv]) # moves will be added in order of how strong they are
+        # Saving ponder move and exiting the loop 
+        elif output.startswith("bestmove"):
+            output_split = output.split()
+            ponder = None
+            if len(output_split) > 2:
+                ponder = output_split[3]
+            return bestmoves, ponder
+        
