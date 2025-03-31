@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue';
 import axios from 'axios';
 import { validateFen } from 'fentastic';
+import MarkdownIt from 'markdown-it';
 
 // Props
 const props = defineProps({
@@ -11,9 +12,14 @@ const props = defineProps({
     },
 });
 
+// Markdown
+const md = new MarkdownIt();
+
+
 // Reactive state
 const userInput = ref('');
 const messages = ref([]);
+const loading = ref(false)
 
 // Methods
 async function sendMessage() {
@@ -21,6 +27,7 @@ async function sendMessage() {
 
     messages.value.push({ role: 'user', content: userInput.value });
     userInput.value = ''; // Clear input field
+    loading.value = true;
 
     try {
         const response = await axios.post('http://127.0.0.1:5000/response',
@@ -35,12 +42,15 @@ async function sendMessage() {
     } catch (error) {
         console.error('Error querying the LLM:', error);
         messages.value.push({ role: 'assistant', content: 'Error: unable to fetch response.' });
+    } finally {
+        loading.value = false;  // Stop showing "thinking"
     }
 }
 
 async function startAnalysis() {
     messages.value.length = 0; // A new analysis only has messages pertaining to that analysis
     if (validateFen(props.fen.trim()).valid) {
+        loading.value = true;
         try {
             const analysis = await axios.post('http://127.0.0.1:5000/analysis',
                 JSON.stringify({ fen: props.fen }),
@@ -58,6 +68,8 @@ async function startAnalysis() {
         } catch (error) {
             console.error('Error querying the LLM:', error);
             messages.value.push({ role: 'assistant', content: 'Error: unable to fetch analysis.' });
+        } finally {
+            loading.value = false;  // Stop showing "thinking"
         }
     }
 }
@@ -68,7 +80,7 @@ watch(() => props.fen, () => {
 });
 
 function isFirstPrompt(stringToCheck) { //Shitties way to do this, but oh well
-    let isFirstPrompt = 
+    let isFirstPrompt =
         (
             stringToCheck.includes("My chess engine suggests the best move")
             && stringToCheck.includes("Please also consider, without speaking about them, that the engine consideres other 3 good moves, which are the following:")
@@ -77,22 +89,35 @@ function isFirstPrompt(stringToCheck) { //Shitties way to do this, but oh well
         );
     return isFirstPrompt
 }
+
+function renderedMarkdown(content) {
+    return md.render(content)
+}
 </script>
 
+
 <template>
-    <div id="chat-view" class="container d-flex flex-column justify-content-between p-3 me-0 rounded-4 w-100 h-100">
+    <div id="chat-view"
+        class="container d-flex flex-column justify-content-between overflow-auto p-3 me-0 rounded-4 w-100 h-100">
         <!-- Chat Messages -->
         <div id="messages" class="flex-item">
             <div v-for="(message, i) in messages" :key="i">
-                <div v-if="message.role === 'user' && !isFirstPrompt(message.content)" class="d-flex justify-content-end">
+                <div v-if="message.role === 'user' && !isFirstPrompt(message.content)"
+                    class="d-flex mb-1 justify-content-end">
                     <div class="p-3 px-4 rounded-4 ms-5" id="usermessage">
-                        <span class="text-break text-start justify-content-start">{{ message.content }}</span>
+                        <div class="text-break text-start justify-content-start message"
+                            v-html="renderedMarkdown(message.content)"></div>
                     </div>
                 </div>
 
                 <div v-else-if="message.role === 'assistant'" class="p-3 pe-4 rounded-4 me-5">
-                    <h6>AI:</h6>
-                    <span class="text-break text-start">{{ message.content }}</span>
+                    <h6 class="mb-0">AI:</h6>
+                    <div class="text-break text-start message" v-html="renderedMarkdown(message.content)"></div>
+                </div>
+            </div>
+            <div v-if="loading" class="thinking-indicator p-3 pe-4 rounded-4 me-5">
+                <div class="text-break text-start text-muted">
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                 </div>
             </div>
         </div>
@@ -121,5 +146,13 @@ input::placeholder {
 
 #usermessage {
     background: #323232 !important;
+}
+
+.message>* {
+    margin: 0% !important;
+}
+
+.spinner-border, h6 {
+    color: #aaa23a; /* Spinner color */
 }
 </style>

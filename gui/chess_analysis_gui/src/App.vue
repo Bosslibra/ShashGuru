@@ -26,14 +26,15 @@ a {
   color: #f2f2f2;
 }
 a:hover {
-  color: #f0d9b5;
+  color: #cdd26a;
 }
 a:focus {
-  color: #f0d9b5;
+  color: #cdd26a;
   font-weight: bolder;
 }
 #logo {
   font-weight: 900;
+  color: #aaa23a;
 }
 
 </style>

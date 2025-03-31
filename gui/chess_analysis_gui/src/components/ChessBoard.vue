@@ -69,4 +69,8 @@ button.btn {
   border-color: #f2f2f2 !important;
   color: #f2f2f2;
 }
+button.btn:hover  {
+  border-color: #cdd26a !important;
+  color: #cdd26a;
+}
 </style>

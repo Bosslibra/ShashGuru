@@ -64,7 +64,7 @@ def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=5):
     ] + chat_history + [
         {"role": "user", "content": prompt}
     ]
-    output = pipe(messages, max_new_tokens=256)
+    output = pipe(messages, max_new_tokens=1024)
     analysis = output[0]["generated_text"][-1]["content"]
 
     chat_history.append({"role": "user", "content": prompt})
