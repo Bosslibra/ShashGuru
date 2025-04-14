@@ -15,14 +15,14 @@ def __fen_to_piece_names(fen):
         for char in rank:
             if char.isdigit():  # Empty squares
                 for _ in range(int(char)):
-                    output.append(f"{files[file_idx]}{8 - rank_idx} is empty")
+                    ## output.append(f"{files[file_idx]}{8 - rank_idx} is empty") removed because 1B freaks out
                     file_idx += 1
             else:  # Piece found
                 color = 'white' if char.isupper() else 'black'
                 piece = piece_names[char.lower()]
                 output.append(f"{files[file_idx]}{8 - rank_idx} has a {color} {piece}")
                 file_idx += 1
-    
+    output.append("Every unmentioned square is empty.")
     return ", ".join(output) + "\n"
 
 # Main fuction, to be called outside
