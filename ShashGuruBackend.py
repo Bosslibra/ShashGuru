@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, json
 from flask_cors import CORS
+import argparse
 
 import LLMHandler
 import engineCommunication
@@ -14,8 +15,8 @@ def analysis():
     print("Received message:", fen)
     depth = 5
     
-    bestmoves, ponder = engineCommunication.call_engine(fen, depth)
-    prompt = LLMHandler.create_prompt(fen, bestmoves, ponder)
+    engine_analysis = engineCommunication.engines(fen, depth)
+    prompt = LLMHandler.create_prompt(fen, engine_analysis)
     analysis, chat_history = LLMHandler.query_LLM(prompt, tokenizer, model)
     print(chat_history)
     return jsonify(chat_history)
@@ -48,7 +49,24 @@ def response():
 
 
 if __name__ == "__main__":
-    tokenizer, model = LLMHandler.load_LLM_model()
+
+    parser = argparse.ArgumentParser(description="Run ShashGuru Backend with optional flags.")
+    parser.add_argument("--M", action="store_true", help="Use MATE model")
+    parser.add_argument("--S", action="store_true", help="Use Llama3.2-1B model")
+    parser.add_argument("--L", action="store_true", help="Use Llama3.1-8B model")
+    args = parser.parse_args()
+
+    modelNumber = 0
+    if args.L:
+        modelNumber = 1
+    elif args.S:
+        modelNumber = 2
+    elif args.M:
+        modelNumber = 3
+    else: 
+        model_number = 1
+
+    tokenizer, model = LLMHandler.load_LLM_model(modelNumber)
 
     #THIS IS NECESSARY, DO NOT REMOVE
     app.run(debug=True)

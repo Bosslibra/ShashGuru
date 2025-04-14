@@ -80,13 +80,7 @@ watch(() => props.fen, () => {
 });
 
 function isFirstPrompt(stringToCheck) { //Shitties way to do this, but oh well
-    let isFirstPrompt =
-        (
-            stringToCheck.includes("My chess engine suggests the best move")
-            && stringToCheck.includes("Please also consider, without speaking about them, that the engine consideres other 3 good moves, which are the following:")
-            && stringToCheck.includes("I will explain the board situation:")
-            && stringToCheck.includes("Can you please explain why is the best move good? Answer with a lengthy analysis")
-        );
+    let isFirstPrompt = ( stringToCheck.includes("I will explain the board situation:") );
     return isFirstPrompt
 }
 
