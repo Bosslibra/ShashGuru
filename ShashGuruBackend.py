@@ -72,7 +72,7 @@ if __name__ == "__main__":
     parser.add_argument("--L", action="store_true", help="Use Llama3.1-8B model")
     args = parser.parse_args()
 
-    modelNumber = 0
+    modelNumber = 1
     if args.L:
         modelNumber = 1
     elif args.S:

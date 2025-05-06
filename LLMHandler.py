@@ -24,18 +24,24 @@ from transformers.utils import logging
 # Import for prompt creation
 from fenManipulation import fen_explainer
 
-#TODO: replace this path with a directory of your local model, not great code I know
-model_path_8B = 'E:/LLAMA3/baseModel/Llama3.1_8B' 
-model_path_1B = 'E:/LLAMA3/baseModel/Llama3.2_1B' 
-
-model_path = model_path_8B
 
 def load_LLM_model(modelNumber):
-
+    
     # Removing logging
     #transformers.utils.logging.disable_progress_bar()
     logging.set_verbosity(transformers.logging.FATAL)
     warnings.filterwarnings("ignore")
+    model_path = ""
+    #__ Llama 3.1-8B ___#
+    if modelNumber == 1: 
+            model_path = "meta-llama/Llama-3.1-8B"
+    #__ Llama 3.2-1B ___#
+    if modelNumber == 2:
+            model_path = "meta-llama/Llama-3.2-1B"
+    #__ Llama 3.1-8B, finetuned with MATE database ___#
+    #elif modelNumber == 3: 
+        ## non credo vada
+        #model = AutoModel.from_pretrained("OutFlankShu/MATE/both/checkpoint-1000")
 
     # Quantizing the model to ensure it runs on machines with mid hardware 
     bnb_config = BitsAndBytesConfig(
@@ -44,7 +50,7 @@ def load_LLM_model(modelNumber):
         bnb_4bit_use_double_quant=True,
         )
     
-    # Tokenizer and model creation (takes a long time on my machine)
+    # Tokenizer and model creation 
     tokenizer = AutoTokenizer.from_pretrained(
         model_path,
         legacy=False)
@@ -158,20 +164,13 @@ def load_LLM_model(modelNumber):
 {%- if add_generation_prompt %}
     {{- '<|start_header_id|>assistant<|end_header_id|>\n\n' }}
 {%- endif %}"""
-    if modelNumber == 1:
-            model = AutoModelForCausalLM.from_pretrained(
-                model_path_8B, 
-                quantization_config=bnb_config,
-                torch_dtype=torch.float16,
-                device_map="auto")
-    if modelNumber == 2:
-            model = AutoModelForCausalLM.from_pretrained(
-                model_path_1B, 
-                quantization_config=bnb_config,
-                torch_dtype=torch.float16,
-                device_map="auto")
-    elif modelNumber == 3:
-            model = AutoModel.from_pretrained("OutFlankShu/MATE/both/checkpoint-1000")
+    
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path, 
+        quantization_config=bnb_config,
+        torch_dtype=torch.float16,
+        device_map="auto")
+   
     
     return (tokenizer, model)
 
