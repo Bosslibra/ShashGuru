@@ -25,7 +25,7 @@ from transformers.utils import logging
 from fenManipulation import fen_explainer
 
 
-def load_LLM_model(modelNumber):
+def load_LLM_model(modelNumber=1):
     
     # Removing logging
     #transformers.utils.logging.disable_progress_bar()
@@ -34,7 +34,7 @@ def load_LLM_model(modelNumber):
     model_path = ""
     #__ Llama 3.1-8B ___#
     if modelNumber == 1: 
-            model_path = "meta-llama/Llama-3.1-8B"
+            model_path = "meta-llama/Llama-3.1-8B-Instruct"
     #__ Llama 3.2-1B ___#
     if modelNumber == 2:
             model_path = "meta-llama/Llama-3.2-1B"
@@ -54,116 +54,7 @@ def load_LLM_model(modelNumber):
     tokenizer = AutoTokenizer.from_pretrained(
         model_path,
         legacy=False)
-    if not hasattr(tokenizer, "chat_template") or tokenizer.chat_template is None:
-        tokenizer.chat_template = """{{- bos_token }}
-{%- if custom_tools is defined %}
-    {%- set tools = custom_tools %}
-{%- endif %}
-{%- if not tools_in_user_message is defined %}
-    {%- set tools_in_user_message = true %}
-{%- endif %}
-{%- if not date_string is defined %}
-    {%- set date_string = "26 Jul 2024" %}
-{%- endif %}
-{%- if not tools is defined %}
-    {%- set tools = none %}
-{%- endif %}
-
-{#- This block extracts the system message, so we can slot it into the right place. #}
-{%- if messages[0]['role'] == 'system' %}
-    {%- set system_message = messages[0]['content']|trim %}
-    {%- set messages = messages[1:] %}
-{%- else %}
-    {%- set system_message = "" %}
-{%- endif %}
-
-{#- System message + builtin tools #}
-{{- "<|start_header_id|>system<|end_header_id|>\n\n" }}
-{%- if builtin_tools is defined or tools is not none %}
-    {{- "Environment: ipython\n" }}
-{%- endif %}
-{%- if builtin_tools is defined %}
-    {{- "Tools: " + builtin_tools | reject('equalto', 'code_interpreter') | join(", ") + "\n\n"}}     
-{%- endif %}
-{{- "Cutting Knowledge Date: December 2023\n" }}
-{{- "Today Date: " + date_string + "\n\n" }}
-{%- if tools is not none and not tools_in_user_message %}
-    {{- "You have access to the following functions. To call a function, please respond with JSON for a function call." }}
-    {{- 'Respond in the format {"name": function name, "parameters": dictionary of argument name and its value}.' }}
-    {{- "Do not use variables.\n\n" }}
-    {%- for t in tools %}
-        {{- t | tojson(indent=4) }}
-        {{- "\n\n" }}
-    {%- endfor %}
-{%- endif %}
-{{- system_message }}
-{{- "<|eot_id|>" }}
-
-{#- Custom tools are passed in a user message with some extra guidance #}
-{%- if tools_in_user_message and not tools is none %}
-    {#- Extract the first user message so we can plug it in here #}
-    {%- if messages | length != 0 %}
-        {%- set first_user_message = messages[0]['content']|trim %}
-        {%- set messages = messages[1:] %}
-    {%- else %}
-        {{- raise_exception("Cannot put tools in the first user message when there's no first user message!") }}
-{%- endif %}
-    {{- '<|start_header_id|>user<|end_header_id|>\n\n' -}}
-    {{- "Given the following functions, please respond with a JSON for a function call " }}
-    {{- "with its proper arguments that best answers the given prompt.\n\n" }}
-    {{- 'Respond in the format {"name": function name, "parameters": dictionary of argument name and its value}.' }}
-    {{- "Do not use variables.\n\n" }}
-    {%- for t in tools %}
-        {{- t | tojson(indent=4) }}
-        {{- "\n\n" }}
-    {%- endfor %}
-    {{- first_user_message + "<|eot_id|>"}}
-{%- endif %}
-
-{%- for message in messages %}
-    {%- if not (message.role == 'ipython' or message.role == 'tool' or 'tool_calls' in message) %}    
-        {{- '<|start_header_id|>' + message['role'] + '<|end_header_id|>\n\n'+ message['content'] | trim + '<|eot_id|>' }}
-    {%- elif 'tool_calls' in message %}
-        {%- if not message.tool_calls|length == 1 %}
-            {{- raise_exception("This model only supports single tool-calls at once!") }}
-        {%- endif %}
-        {%- set tool_call = message.tool_calls[0].function %}
-        {%- if builtin_tools is defined and tool_call.name in builtin_tools %}
-            {{- '<|start_header_id|>assistant<|end_header_id|>\n\n' -}}
-            {{- "<|python_tag|>" + tool_call.name + ".call(" }}
-            {%- for arg_name, arg_val in tool_call.arguments | items %}
-                {{- arg_name + '="' + arg_val + '"' }}
-                {%- if not loop.last %}
-                    {{- ", " }}
-                {%- endif %}
-                {%- endfor %}
-            {{- ")" }}
-        {%- else  %}
-            {{- '<|start_header_id|>assistant<|end_header_id|>\n\n' -}}
-            {{- '{"name": "' + tool_call.name + '", ' }}
-            {{- '"parameters": ' }}
-            {{- tool_call.arguments | tojson }}
-            {{- "}" }}
-        {%- endif %}
-        {%- if builtin_tools is defined %}
-            {#- This means we're in ipython mode #}
-            {{- "<|eom_id|>" }}
-        {%- else %}
-            {{- "<|eot_id|>" }}
-        {%- endif %}
-    {%- elif message.role == "tool" or message.role == "ipython" %}
-        {{- "<|start_header_id|>ipython<|end_header_id|>\n\n" }}
-        {%- if message.content is mapping or message.content is iterable %}
-            {{- message.content | tojson }}
-        {%- else %}
-            {{- message.content }}
-        {%- endif %}
-        {{- "<|eot_id|>" }}
-    {%- endif %}
-{%- endfor %}
-{%- if add_generation_prompt %}
-    {{- '<|start_header_id|>assistant<|end_header_id|>\n\n' }}
-{%- endif %}"""
+    
     
     model = AutoModelForCausalLM.from_pretrained(
         model_path, 
@@ -175,15 +66,31 @@ def load_LLM_model(modelNumber):
     return (tokenizer, model)
 
 def __format_eval(entry):
-        """Helper to format evaluation: prefer 'mate in' if available."""
+        
         if 'mate' in entry and entry['mate'] is not None:
             return f"mate in {entry['mate']}"
-        elif 'eval' in entry:
-            return f"{entry['eval']} cp"
+        elif 'score' in entry:
+            return f"{entry['score']} cp"
         return None
 
+def create_prompt_single_engine(fen, bestmoves, ponder):
+    explainedFEN = fen_explainer(fen)
+    #I have the following fen {fen} and m
+    best_eval = []
+    for i in range(0, len(bestmoves)):
+        best_eval.append(__format_eval(bestmoves[i]))
+    print(bestmoves, best_eval)
 
-def create_prompt(fen, engine_analysis):    
+    prompt = f'''My chess engine suggests the best move {bestmoves[0]['move']} (expressed in uci standard) with the score {best_eval[0]}.
+        {"" if ponder == None else f"The engine expects that this best move will be met by {ponder} on the next move."}
+        Please also consider, without speaking about them, that the engine consideres other 3 good moves, which are the following:
+        {[m['move'] for m in bestmoves[1:]]}
+        Can you please explain why is the best move good? Answer without filler text, in a concise manner'''
+    prompt = "I will explain the board situation:\n" + explainedFEN + prompt
+    print(prompt)
+    return prompt
+
+def create_prompt_double_engine(fen, engine_analysis):    
     explainedFEN = fen_explainer(fen)
 
     nnue = engine_analysis['NNUE']

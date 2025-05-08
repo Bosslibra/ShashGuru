@@ -29,10 +29,16 @@ CORS(app)
 def analysis():
     fen = request.json.get('fen')  
     print("Received message:", fen)
-    depth = 5
+    depth = 15
     
-    engine_analysis = engineCommunication.engines(fen, depth)
-    prompt = LLMHandler.create_prompt(fen, engine_analysis)
+    bestmoves, ponder = engineCommunication.call_engine(fen, depth)
+    prompt = LLMHandler.create_prompt_single_engine(fen, bestmoves, ponder)
+
+    ############################
+    #  Questo è per due engine #
+    ############################
+    #engine_analysis = engineCommunication.engines(fen, depth)
+    #prompt = LLMHandler.create_prompt_double_engine(fen, engine_analysis)
     analysis, chat_history = LLMHandler.query_LLM(prompt, tokenizer, model)
     print(chat_history)
     return jsonify(chat_history)

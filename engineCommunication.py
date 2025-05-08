@@ -24,7 +24,7 @@ engine_name_HUMAN = 'alexander'
 engine_path_NNUE = f".\\executables\\{engine_name_NNUE}.exe" if os.name == 'nt' else f"./executables/{engine_name_NNUE}"
 engine_path_HUMAN = f".\\executables\\{engine_name_HUMAN}.exe" if os.name == 'nt' else f"./executables/{engine_name_HUMAN}"
 
-def call_engine(fen, depth, engine_path):
+def call_engine(fen, depth, engine_path=engine_path_NNUE):
     engine = subprocess.Popen([engine_path],
                                stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE,
