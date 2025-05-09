@@ -60,7 +60,7 @@ def load_LLM_model(modelNumber=1):
         model_path, 
         quantization_config=bnb_config,
         torch_dtype=torch.float16,
-        device_map="auto")
+        device_map={"":0})
    
     
     return (tokenizer, model)
