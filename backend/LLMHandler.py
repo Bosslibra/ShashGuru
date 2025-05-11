@@ -55,13 +55,11 @@ def load_LLM_model(modelNumber=1):
         model_path,
         legacy=False)
     
-    
     model = AutoModelForCausalLM.from_pretrained(
         model_path, 
         quantization_config=bnb_config,
         torch_dtype=torch.float16,
         device_map={"":0})
-   
     
     return (tokenizer, model)
 
@@ -127,11 +125,12 @@ def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=5):
     chat_history = chat_history[-max_history:]
     
     messages = [
-        {"role": "system", "content": '''You are an AI chess analyzer.
-            You should answer in a concise manner, without filler text.
-            Unless instructed otherwise, respond in the same language as the user's query.
-            Only answer about chess, no other topic should be discussed.
-            '''}
+        {"role": "system", "content": '''
+         You are a strong chess analysis assistant, powered by expert-level knowledge of strategy, tactics, and positional understanding.
+         When a user provides a position or move request, respond with clear, insightful evaluations that include the best move, the reasoning behind it, and any critical ideas, threats, or positional plans.
+         Avoid unnecessary filler, but enrich your answers with concrete ideas such as tactical motifs, piece activity, weaknesses, and long-term plans.
+         Use natural, chess-appropriate language. Stay strictly within the topic of chess.
+         '''}
     ] + chat_history + [
         {"role": "user", "content": prompt}
     ]
