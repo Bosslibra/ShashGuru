@@ -24,6 +24,7 @@ from transformers.utils import logging
 # Import for prompt creation
 from fenManipulation import fen_explainer
 
+quantization = False
 
 def load_LLM_model(modelNumber=1):
     
@@ -43,23 +44,34 @@ def load_LLM_model(modelNumber=1):
         ## non credo vada
         #model = AutoModel.from_pretrained("OutFlankShu/MATE/both/checkpoint-1000")
 
-    # Quantizing the model to ensure it runs on machines with mid hardware 
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_use_double_quant=True,
-        )
-    
-    # Tokenizer and model creation 
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_path,
-        legacy=False)
-    
-    model = AutoModelForCausalLM.from_pretrained(
-        model_path, 
-        quantization_config=bnb_config,
-        torch_dtype=torch.float16,
-        device_map={"":0})
+    if quantization:
+        # Quantizing the model to ensure it runs on machines with mid hardware 
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_use_double_quant=True,
+            )
+        
+        # Tokenizer and model creation 
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_path,
+            legacy=False)
+        
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path, 
+            quantization_config=bnb_config,
+            torch_dtype=torch.float16,
+            device_map={"":0})
+    else:
+         # Tokenizer and model creation 
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_path,
+            legacy=False)
+        
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            torch_dtype=torch.bfloat16,
+            device_map={"":0})
     
     return (tokenizer, model)
 
