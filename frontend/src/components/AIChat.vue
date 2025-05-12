@@ -4,6 +4,8 @@ import axios from 'axios';
 import { validateFen } from 'fentastic';
 import MarkdownIt from 'markdown-it';
 
+const server_url = 'https://8abd-2001-760-2e00-f002-56e4-a9dd-ec60-e467.ngrok-free.app'
+
 // Props
 const props = defineProps({
     fen: {
@@ -30,7 +32,7 @@ async function sendMessage() {
     loading.value = true;
 
     try {
-        const response = await axios.post('http://127.0.0.1:5000/response',
+        const response = await axios.post(server_url + '/response',
             JSON.stringify(messages.value),
             {
                 headers: {
@@ -52,7 +54,7 @@ async function startAnalysis() {
     if (validateFen(props.fen.trim()).valid) {
         loading.value = true;
         try {
-            const analysis = await axios.post('http://127.0.0.1:5000/analysis',
+            const analysis = await axios.post(server_url + '/analysis',
                 JSON.stringify({ fen: props.fen }),
                 {
                     headers: {
