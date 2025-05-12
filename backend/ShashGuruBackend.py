@@ -91,4 +91,5 @@ if __name__ == "__main__":
     tokenizer, model = LLMHandler.load_LLM_model(modelNumber)
 
     #THIS IS NECESSARY, DO NOT REMOVE
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
+    
