@@ -28,7 +28,7 @@ CORS(app)
 @app.route("/analysis", methods=['GET', 'POST'])
 def analysis():
     fen = request.json.get('fen')  
-    print("Received message:", fen)
+    print("Received analysis request for:", fen)
     depth = 15
     
     bestmoves, ponder = engineCommunication.call_engine(fen, depth)
@@ -39,7 +39,7 @@ def analysis():
     ############################
     #engine_analysis = engineCommunication.engines(fen, depth)
     #prompt = LLMHandler.create_prompt_double_engine(fen, engine_analysis)
-    analysis, chat_history = LLMHandler.query_LLM(prompt, tokenizer, model)
+    analysis, chat_history = LLMHandler.query_LLM(prompt, tokenizer, fen, model)
     print(chat_history)
     return jsonify(chat_history)
 
@@ -55,7 +55,7 @@ def response():
     related = LLMHandler.is_chess_related(new_question, tokenizer, model)
     if related:
         print("is chess related")
-        answer, chat_history = LLMHandler.query_LLM(new_question, tokenizer, model, chat_history=chat_history[:-1])
+        answer, chat_history = LLMHandler.query_LLM(new_question, tokenizer, model, fen=None, chat_history=chat_history[:-1])
         print(answer)
     else: 
         default_not_chess = '''Your question might not be chess-related, therefore I cannot answer it.\nIf you believe this is a false report, try to reformulate the question.'''
