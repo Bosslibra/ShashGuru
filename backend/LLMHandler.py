@@ -96,7 +96,7 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
         Please also consider, without speaking about them, that the engine consideres other 3 good moves, which are the following:
         {[m['move'] for m in bestmoves[1:]]}
         '''
-    prompt = "I will explain the board situation:\n" + prompt
+    prompt = "Given the position, " + prompt
     print(prompt)
     return prompt
 
