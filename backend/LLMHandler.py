@@ -130,7 +130,9 @@ def create_prompt_double_engine(fen, engine_analysis):
     return full_prompt
 
 def query_LLM(prompt, tokenizer, model, fen=None, chat_history=None, max_history=10):
-    explainedFEN = fen_explainer(fen)
+    explainedFEN = ''
+    if fen is not None:
+        explainedFEN = "You explain this position: " + fen_explainer(fen)
     pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, device_map="auto")
     if chat_history is None:
         chat_history = []
@@ -139,7 +141,7 @@ def query_LLM(prompt, tokenizer, model, fen=None, chat_history=None, max_history
     messages = [
         {"role": "system", "content": f'''
          You are a strong chess analysis assistant, powered by expert-level knowledge of strategy, tactics, and positional understanding.
-         { 'You explain this position ' + fen_explainer(fen) if fen is not None else '' }
+         { explainedFEN }
          When a user provides a move, respond with clear, insightful evaluations that include the best move, the reasoning behind it, and any critical ideas, threats, or positional plans.
          Avoid unnecessary filler, but enrich your answers with concrete ideas such as tactical motifs, piece activity, material advantage, positional advantage, weaknesses, and long-term plans.
          Use natural, chess-appropriate language. Stay strictly within the topic of chess.
