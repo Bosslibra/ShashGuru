@@ -16,6 +16,7 @@
 
 import transformers, torch
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoModel
+from accelerate import Accelerator
 
 # Imports that remove logging
 import warnings
@@ -24,7 +25,7 @@ from transformers.utils import logging
 # Import for prompt creation
 from fenManipulation import fen_explainer
 
-quantization = False
+quantization = True
 
 def load_LLM_model(modelNumber=1):
     
@@ -71,7 +72,7 @@ def load_LLM_model(modelNumber=1):
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
             torch_dtype=torch.bfloat16,
-            device_map={"":0})
+            device_map="auto")
     
     return (tokenizer, model)
 
