@@ -16,6 +16,7 @@
 
 import transformers, torch
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoModel
+from accelerate import Accelerator
 
 # Imports that remove logging
 import warnings
@@ -71,7 +72,7 @@ def load_LLM_model(modelNumber=1):
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
             torch_dtype=torch.bfloat16,
-            device_map={"":0})
+            device_map="auto")
     
     return (tokenizer, model)
 
@@ -95,7 +96,7 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
         Please also consider, without speaking about them, that the engine consideres other 3 good moves, which are the following:
         {[m['move'] for m in bestmoves[1:]]}
         '''
-    prompt = "I will explain the board situation:\n" + prompt
+    prompt = "Given the position, " + prompt
     print(prompt)
     return prompt
 
