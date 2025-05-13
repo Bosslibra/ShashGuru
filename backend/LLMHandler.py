@@ -62,7 +62,7 @@ def load_LLM_model(modelNumber=1):
             model_path, 
             quantization_config=bnb_config,
             torch_dtype=torch.float16,
-            device_map={"":0})
+            device_map="auto")
     else:
          # Tokenizer and model creation 
         tokenizer = AutoTokenizer.from_pretrained(
