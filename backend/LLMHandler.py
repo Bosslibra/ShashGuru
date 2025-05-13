@@ -85,8 +85,7 @@ def __format_eval(entry):
         return None
 
 def create_prompt_single_engine(fen, bestmoves, ponder):
-    explainedFEN = fen_explainer(fen)
-    #I have the following fen {fen} and m
+    
     best_eval = []
     for i in range(0, len(bestmoves)):
         best_eval.append(__format_eval(bestmoves[i]))
@@ -96,8 +95,8 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
         {"" if ponder == None else f"The engine expects that this best move will be met by {ponder} on the next move."}
         Please also consider, without speaking about them, that the engine consideres other 3 good moves, which are the following:
         {[m['move'] for m in bestmoves[1:]]}
-        Can you please explain why is the best move good? Answer without filler text, in a concise manner'''
-    prompt = "I will explain the board situation:\n" + explainedFEN + prompt
+        '''
+    prompt = "I will explain the board situation:\n" + prompt
     print(prompt)
     return prompt
 
@@ -131,17 +130,19 @@ def create_prompt_double_engine(fen, engine_analysis):
     full_prompt = "I will explain the board situation:\n" + explainedFEN + "\n\n" + bestmove_prompt + " " + counter_prompt + "Can you explain why these suggested moves are strong? Provide an insightful chess analysis."
     return full_prompt
 
-def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=5):
+def query_LLM(prompt, tokenizer, model, fen=None, chat_history=None, max_history=10):
+    explainedFEN = fen_explainer(fen)
     pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, device_map="auto")
     if chat_history is None:
         chat_history = []
     chat_history = chat_history[-max_history:]
     
     messages = [
-        {"role": "system", "content": '''
+        {"role": "system", "content": f'''
          You are a strong chess analysis assistant, powered by expert-level knowledge of strategy, tactics, and positional understanding.
-         When a user provides a position or move request, respond with clear, insightful evaluations that include the best move, the reasoning behind it, and any critical ideas, threats, or positional plans.
-         Avoid unnecessary filler, but enrich your answers with concrete ideas such as tactical motifs, piece activity, weaknesses, and long-term plans.
+         { 'You explain this position ' + fen_explainer(fen) if fen is not None else '' }
+         When a user provides a move, respond with clear, insightful evaluations that include the best move, the reasoning behind it, and any critical ideas, threats, or positional plans.
+         Avoid unnecessary filler, but enrich your answers with concrete ideas such as tactical motifs, piece activity, material advantage, positional advantage, weaknesses, and long-term plans.
          Use natural, chess-appropriate language. Stay strictly within the topic of chess.
          '''}
     ] + chat_history + [
