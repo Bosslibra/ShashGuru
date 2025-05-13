@@ -39,7 +39,7 @@ def analysis():
     ############################
     #engine_analysis = engineCommunication.engines(fen, depth)
     #prompt = LLMHandler.create_prompt_double_engine(fen, engine_analysis)
-    analysis, chat_history = LLMHandler.query_LLM(prompt, tokenizer, fen, model)
+    analysis, chat_history = LLMHandler.query_LLM(prompt, tokenizer, model, fen)
     print(chat_history)
     return jsonify(chat_history)
 
