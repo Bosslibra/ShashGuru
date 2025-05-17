@@ -93,8 +93,7 @@ function renderedMarkdown(content) {
 
 
 <template>
-    <div id="chat-view"
-        class="container d-flex flex-column justify-content-between overflow-auto p-3 me-0 rounded-4 w-100 h-100">
+    <div class="container d-flex flex-column justify-content-between overflow-auto p-3 me-0 rounded-bottom rounded-4 w-100 h-100">
         <!-- Chat Messages -->
         <div id="messages" class="flex-item">
             <div v-for="(message, i) in messages" :key="i">
@@ -126,9 +125,7 @@ function renderedMarkdown(content) {
 </template>
 
 <style scoped>
-#chat-view {
-    background-color: #262421;
-}
+
 
 #input {
     background-color: #2e2e2e;
