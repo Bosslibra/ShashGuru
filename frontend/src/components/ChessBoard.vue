@@ -2,6 +2,7 @@
 import { ref, reactive } from 'vue';
 import { TheChessboard } from 'vue3-chessboard';
 import 'vue3-chessboard/style.css';
+import {Chess} from 'chess.js'
 
 const emit = defineEmits(['updateFen']);
 
@@ -19,6 +20,7 @@ const boardConfig = reactive({
 
 
 const fen = ref(boardConfig.fen);
+const pgn = ref('');
 
 // --- Event Handlers ---
 
@@ -55,6 +57,19 @@ function setPositionFromInput() {
     emit("updateFen", trimmedFen);
   }
 }
+
+function handlePGN(){
+  var chess = new Chess();
+
+  chess.loadPgn(pgn.value);
+  
+  const finalFEN = chess.fen();
+  fen.value = finalFEN;
+  emit("updateFen", finalFEN);
+  boardAPI.value?.setPosition(finalFEN);
+  emit("showMoveHistory", chess.history())
+}
+
 </script>
 
 <template>
@@ -85,6 +100,17 @@ function setPositionFromInput() {
       aria-label="FEN Input"
     />
     </div>
+    <div class="pgn-input-container">
+    <input
+      v-model="pgn"
+      @keyup.enter="handlePGN"
+      id="pgnInput"
+      class="flex-item border rounded px-3 py-2 mt-2 w-100 text-white bg-dark border-0"
+      placeholder="Enter PGN and press Enter"
+      autocomplete="off"
+      aria-label="PGN Input"
+    />
+    </div>
 </template>
 
 <style scoped>
@@ -94,6 +120,9 @@ function setPositionFromInput() {
 }
 
 .fen-input-container {
+  margin-top: 0.5rem;
+}
+.pgn-input-container {
   margin-top: 0.5rem;
 }
 
