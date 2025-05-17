@@ -19,6 +19,27 @@ const boardConfig = reactive({
 });
 
 
+// --- ROBA NUOVA ---
+import { watch } from 'vue';
+
+const props = defineProps({
+  fenProp: {
+    type: String,
+    required: false
+  }
+});
+
+// Watch for fen changes from parent and update board
+watch(() => props.fenProp, (newFen) => {
+  if (newFen && boardAPI.value) {
+    fen.value = newFen;
+    console.log(fen.value)
+    boardAPI.value.setPosition(newFen);
+  }
+});
+//--- FINE
+
+
 const fen = ref(boardConfig.fen);
 const pgn = ref('');
 
@@ -67,7 +88,7 @@ function handlePGN(){
   fen.value = finalFEN;
   emit("updateFen", finalFEN);
   boardAPI.value?.setPosition(finalFEN);
-  emit("showMoveHistory", chess.history())
+  emit("setMovesFromPGN", chess.history())
 }
 
 </script>
