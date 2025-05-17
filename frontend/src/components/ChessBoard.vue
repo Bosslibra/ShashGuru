@@ -88,22 +88,20 @@ function setPositionFromInput() {
 </template>
 
 <style scoped>
-/* Scoped styles are often preferred to avoid global style conflicts */
-/* Consider adding 'scoped' to the <style> tag if these styles are component-specific */
 
 .board-controls {
-  margin-bottom: 1rem; /* Added some margin for better spacing */
+  margin-bottom: 1rem; 
 }
 
 .fen-input-container {
-  margin-top: 0.5rem; /* Consistent margin */
+  margin-top: 0.5rem;
 }
 
 button.btn {
   border-color: #f2f2f2;
   color: #f2f2f2;
-  background-color: transparent; /* Assuming a dark background context */
-  transition: color 0.15s ease-in-out, border-color 0.15s ease-in-out; /* Smooth transition */
+  background-color: transparent; 
+  transition: color 0.15s ease-in-out, border-color 0.15s ease-in-out; 
 }
 
 button.btn:hover {
@@ -111,12 +109,4 @@ button.btn:hover {
   color: #cdd26a;
 }
 
-/* Example of a more specific selector for the input if needed */
-/*
-#fenInput {
-  background-color: #343a40;
-  color: #f8f9fa;
-  border: 1px solid #6c757d;
-}
-*/
 </style>
