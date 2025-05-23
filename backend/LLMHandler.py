@@ -15,6 +15,7 @@
 #along with this program.  If not, see <https://www.gnu.org/licenses/>.vb
 
 import transformers, torch
+from optimum.intel.openvino import OVModelForCausalLM
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoModel
 from accelerate import Accelerator
 
@@ -29,10 +30,6 @@ quantization = True
 
 def load_LLM_model(modelNumber=1):
     
-    # Removing logging
-    #transformers.utils.logging.disable_progress_bar()
-    logging.set_verbosity(transformers.logging.FATAL)
-    warnings.filterwarnings("ignore")
     model_path = ""
     #__ Llama 3.1-8B ___#
     if modelNumber == 1: 
@@ -45,35 +42,58 @@ def load_LLM_model(modelNumber=1):
         ## non credo vada
         #model = AutoModel.from_pretrained("OutFlankShu/MATE/both/checkpoint-1000")
 
-    if quantization:
-        # Quantizing the model to ensure it runs on machines with mid hardware 
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.float16,
-            bnb_4bit_use_double_quant=True,
-            )
-        
-        # Tokenizer and model creation 
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_path,
-            legacy=False)
-        
-        model = AutoModelForCausalLM.from_pretrained(
-            model_path, 
-            quantization_config=bnb_config,
-            torch_dtype=torch.float16,
-            device_map="auto")
-    else:
-         # Tokenizer and model creation 
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_path,
-            legacy=False)
-        
-        model = AutoModelForCausalLM.from_pretrained(
-            model_path,
-            torch_dtype=torch.bfloat16,
-            device_map="auto")
+
+    ###########################
+    ### NPU v CUDA decision ###
+    ###########################
     
+    if torch.cuda.is_available():   
+        ##############
+        ###  CUDA  ###
+        ##############
+
+        # Removing logging
+        #transformers.utils.logging.disable_progress_bar()
+        logging.set_verbosity(transformers.logging.FATAL)
+        warnings.filterwarnings("ignore")
+        
+
+        if quantization:
+            # Quantizing the model to ensure it runs on machines with mid hardware 
+            bnb_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_use_double_quant=True,
+                )
+            
+            # Tokenizer and model creation 
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_path,
+                legacy=False)
+            
+            model = AutoModelForCausalLM.from_pretrained(
+                model_path, 
+                quantization_config=bnb_config,
+                torch_dtype=torch.float16,
+                device_map="auto")
+        else:
+            # Tokenizer and model creation 
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_path,
+                legacy=False)
+            
+            model = AutoModelForCausalLM.from_pretrained(
+                model_path,
+                torch_dtype=torch.bfloat16,
+                device_map="auto")
+    else:
+        ##############
+        ###  NPU  ###
+        ############## 
+        tokenizer = AutoTokenizer.from_pretrained(model_path)
+        model = OVModelForCausalLM.from_pretrained(model_path, export=True, compile=True)
+
+
     return (tokenizer, model)
 
 def __format_eval(entry):
