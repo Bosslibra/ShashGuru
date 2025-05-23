@@ -38,7 +38,7 @@ function onMoveClicked(index) {
       <ChessBoard :fenProp="fen" @updateFen="updateFen" @setMovesFromPGN="setMovesFromPGN"></ChessBoard>
 
     </div>
-    <div id="chat-view" class="flex-item flex-fill m-5 rounded-4">
+    <div id="chat-view" class="flex-item flex-fill m-5 rounded-4 d-flex flex-column">
 
       <!-- MOVES -->
       <div class="p-4 fs-5 border-bottom">
@@ -48,14 +48,13 @@ function onMoveClicked(index) {
           @click="onMoveClicked(index)"
           style="cursor:pointer;" v-for="(move, index) in moves" :key="index">
           
-          <span class="" v-if="index % 2 === 0">
+          <span class="text-muted" v-if="index % 2 === 0">
             {{ Math.floor(index / 2 + 1) }}.
-            
           </span>
           <span class="colorize px-2 p-1" v-if="index % 2 === 0">
           {{ move }}
           </span>
-          <span class="colorize px-2 p-1 me-3" v-else>
+          <span class="colorize px-1 p-1 me-1" v-else>
           {{ move }}
           </span>
         </span>
@@ -72,6 +71,7 @@ function onMoveClicked(index) {
 <style scoped>
 #chat-view {
     background-color: #262421;
+    height: 80vh;
 }
 .d-flex {
   color: aliceblue;
