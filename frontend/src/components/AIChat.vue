@@ -4,7 +4,7 @@ import axios from 'axios';
 import { validateFen } from 'fentastic';
 import MarkdownIt from 'markdown-it';
 
-const server_url = 'https://e9bc-2001-760-2e00-f002-dbf6-4d97-5927-3e3.ngrok-free.app'
+const server_url = import.meta.env.BASE_URL + 'backend'
 
 // Props
 const props = defineProps({

@@ -6,8 +6,23 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
     ports:
-      - "8080:80"
+      - "80:80"
+      - "6666:6666"
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
+      - model_server_0
+      - model_server_1
+      - model_server_2
+      - model_server_3
+      - model_server_4
+      - model_server_5
+      - model_server_6
+      - model_server_7
+      - model_server_8
+      - model_server_9
+      - model_server_10
+      - model_server_11
       - backend
 
   backend:
@@ -20,3 +35,172 @@ services:
       - ./backend:/app
     environment:
       - FLASK_ENV=development
+
+  model_server_0:
+    image: openvino/model_server:latest
+    container_name: model_server_0
+    cpuset: 0-31
+    expose:
+    - 8000
+    volumes:
+    - ./models:/workspace:ro
+    command:
+    - --rest_port
+    - '8000'
+    - --config_path
+    - /workspace/config.json
+    - --metrics_enable
+  model_server_1:
+    image: openvino/model_server:latest
+    container_name: model_server_1
+    cpuset: 192-223
+    expose:
+    - 8000
+    volumes:
+    - ./models:/workspace:ro
+    command:
+    - --rest_port
+    - '8000'
+    - --config_path
+    - /workspace/config.json
+    - --metrics_enable
+  model_server_2:
+    image: openvino/model_server:latest
+    container_name: model_server_2
+    cpuset: 32-63
+    expose:
+    - 8000
+    volumes:
+    - ./models:/workspace:ro
+    command:
+    - --rest_port
+    - '8000'
+    - --config_path
+    - /workspace/config.json
+    - --metrics_enable
+  model_server_3:
+    image: openvino/model_server:latest
+    container_name: model_server_3
+    cpuset: 224-255
+    expose:
+    - 8000
+    volumes:
+    - ./models:/workspace:ro
+    command:
+    - --rest_port
+    - '8000'
+    - --config_path
+    - /workspace/config.json
+    - --metrics_enable
+  model_server_4:
+    image: openvino/model_server:latest
+    container_name: model_server_4
+    cpuset: 64-95
+    expose:
+    - 8000
+    volumes:
+    - ./models:/workspace:ro
+    command:
+    - --rest_port
+    - '8000'
+    - --config_path
+    - /workspace/config.json
+    - --metrics_enable
+  model_server_5:
+    image: openvino/model_server:latest
+    container_name: model_server_5
+    cpuset: 256-287
+    expose:
+    - 8000
+    volumes:
+    - ./models:/workspace:ro
+    command:
+    - --rest_port
+    - '8000'
+    - --config_path
+    - /workspace/config.json
+    - --metrics_enable
+  model_server_6:
+    image: openvino/model_server:latest
+    container_name: model_server_6
+    cpuset: 96-127
+    expose:
+    - 8000
+    volumes:
+    - ./models:/workspace:ro
+    command:
+    - --rest_port
+    - '8000'
+    - --config_path
+    - /workspace/config.json
+    - --metrics_enable
+  model_server_7:
+    image: openvino/model_server:latest
+    container_name: model_server_7
+    cpuset: 288-319
+    expose:
+    - 8000
+    volumes:
+    - ./models:/workspace:ro
+    command:
+    - --rest_port
+    - '8000'
+    - --config_path
+    - /workspace/config.json
+    - --metrics_enable
+  model_server_8:
+    image: openvino/model_server:latest
+    container_name: model_server_8
+    cpuset: 128-159
+    expose:
+    - 8000
+    volumes:
+    - ./models:/workspace:ro
+    command:
+    - --rest_port
+    - '8000'
+    - --config_path
+    - /workspace/config.json
+    - --metrics_enable
+  model_server_9:
+    image: openvino/model_server:latest
+    container_name: model_server_9
+    cpuset: 320-351
+    expose:
+    - 8000
+    volumes:
+    - ./models:/workspace:ro
+    command:
+    - --rest_port
+    - '8000'
+    - --config_path
+    - /workspace/config.json
+    - --metrics_enable
+  model_server_10:
+    image: openvino/model_server:latest
+    container_name: model_server_10
+    cpuset: 160-191
+    expose:
+    - 8000
+    volumes:
+    - ./models:/workspace:ro
+    command:
+    - --rest_port
+    - '8000'
+    - --config_path
+    - /workspace/config.json
+    - --metrics_enable
+  model_server_11:
+    image: openvino/model_server:latest
+    container_name: model_server_11
+    cpuset: 352-383
+    expose:
+    - 8000
+    volumes:
+    - ./models:/workspace:ro
+    command:
+    - --rest_port
+    - '8000'
+    - --config_path
+    - /workspace/config.json
+    - --metrics_enable

@@ -14,9 +14,8 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <https://www.gnu.org/licenses/>.vb
 
-import transformers, torch
-from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoModel
-from accelerate import Accelerator
+import transformers
+from openai import OpenAI
 
 # Imports that remove logging
 import warnings
@@ -45,36 +44,8 @@ def load_LLM_model(modelNumber=1):
         ## non credo vada
         #model = AutoModel.from_pretrained("OutFlankShu/MATE/both/checkpoint-1000")
 
-    if quantization:
-        # Quantizing the model to ensure it runs on machines with mid hardware 
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.float16,
-            bnb_4bit_use_double_quant=True,
-            )
-        
-        # Tokenizer and model creation 
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_path,
-            legacy=False)
-        
-        model = AutoModelForCausalLM.from_pretrained(
-            model_path, 
-            quantization_config=bnb_config,
-            torch_dtype=torch.float16,
-            device_map="auto")
-    else:
-         # Tokenizer and model creation 
-        tokenizer = AutoTokenizer.from_pretrained(
-            model_path,
-            legacy=False)
-        
-        model = AutoModelForCausalLM.from_pretrained(
-            model_path,
-            torch_dtype=torch.bfloat16,
-            device_map="auto")
-    
-    return (tokenizer, model)
+    model = OpenAI(base_url="http://frontend:6666/v3", api_key="unused")
+    return None, model
 
 def __format_eval(entry):
         
@@ -131,8 +102,12 @@ def create_prompt_double_engine(fen, engine_analysis):
     return full_prompt
 
 def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=10):
-    
-    pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, device_map="auto")
+
+    pipe = lambda messages, max_new_tokens: model.chat.completions.create(
+        model = "meta-llama/Llama-3.1-8B-Instruct",
+        messages=messages,
+        # max_completion_tokens=max_new_tokens,
+    )
     if chat_history is None:
         chat_history = []
     chat_history = chat_history[-max_history:]
@@ -148,7 +123,7 @@ def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=10):
         {"role": "user", "content": prompt}
     ]
     output = pipe(messages, max_new_tokens=1024)
-    analysis = output[0]["generated_text"][-1]["content"]
+    analysis = output.choices[0].message.content
 
     chat_history.append({"role": "user", "content": prompt})
     chat_history.append({"role": "assistant", "content": analysis})
@@ -156,7 +131,12 @@ def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=10):
     return analysis, chat_history
 
 def is_chess_related(question, tokenizer, model):
-    pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, device_map="auto")
+    pipe = lambda messages, max_new_tokens: model.chat.completions.create(
+        model = "meta-llama/Llama-3.1-8B-Instruct",
+        messages=messages,
+        max_completion_tokens=max_new_tokens,
+    )
+
     messages = [
         {"role": "system", "content": '''You are a filtering agent.
             Your job is to decide if the text is chess-related.
@@ -166,6 +146,6 @@ def is_chess_related(question, tokenizer, model):
         {"role": "user", "content": question + "Is this question chess-related?"}
     ]
     output = pipe(messages, max_new_tokens=256)
-    response = output[0]["generated_text"][-1]["content"].strip().lower()
+    response = output.choices[0].message.content
     
     return response in ["yes", "yes."]
