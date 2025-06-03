@@ -6,6 +6,7 @@ import { Chess } from 'chess.js'
 
 const fen = ref("");
 const moves = ref([])
+const isLoading = ref(false)
 
 function updateFen(newFen) {
   fen.value = newFen; // Update parent state when ComponentA emits the new FEN
@@ -27,14 +28,16 @@ function onMoveClicked(index) {
   updateFen(chess.fen());
 }
 
-
+function handleLoadingChat(val) {
+  isLoading.value = val 
+}
 
 
 </script>
 
 <template>
   <div class="d-flex justify-content-evenly mx-5 ">
-    <div class="flex-item m-5 mt-2 p-3">
+    <div class="flex-item m-5 mt-2 p-3" :class="{'loading': isLoading}">
       <ChessBoard :fenProp="fen" @updateFen="updateFen" @setMovesFromPGN="setMovesFromPGN"></ChessBoard>
 
     </div>
@@ -62,7 +65,7 @@ function onMoveClicked(index) {
 
       <!--CHAT-->
 
-      <AIChat :fen="fen"></AIChat>
+      <AIChat :fen="fen" @loadingChat="handleLoadingChat"></AIChat>
     </div>
   </div>
 </template>
@@ -82,5 +85,8 @@ function onMoveClicked(index) {
   color: black;
   border-radius: 4px;
   user-select: none;
+}
+.loading {
+  pointer-events: none; /* Prevent all interaction */
 }
 </style>

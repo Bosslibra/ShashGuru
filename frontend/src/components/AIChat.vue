@@ -5,6 +5,9 @@ import { validateFen } from 'fentastic';
 import MarkdownIt from 'markdown-it';
 
 const server_url = import.meta.env.BASE_URL + 'backend'
+const starting_fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+//emits
+const emit = defineEmits(['loadingChat']);
 
 // Props
 const props = defineProps({
@@ -13,7 +16,6 @@ const props = defineProps({
         required: true,
     },
 });
-
 // Markdown
 const md = new MarkdownIt();
 
@@ -22,7 +24,7 @@ const md = new MarkdownIt();
 const userInput = ref('');
 const messages = ref([]);
 const loading = ref(false)
-
+const toAnalyse = ref(true);
 // Methods
 async function sendMessage() {
     if (userInput.value.trim() === '') return; //No empty messages
@@ -30,6 +32,7 @@ async function sendMessage() {
     messages.value.push({ role: 'user', content: userInput.value });
     userInput.value = ''; // Clear input field
     loading.value = true;
+    emit('loadingChat', true)
 
     try {
         const response = await axios.post(server_url + '/response',
@@ -45,14 +48,20 @@ async function sendMessage() {
         console.error('Error querying the LLM:', error);
         messages.value.push({ role: 'assistant', content: 'Error: unable to fetch response.' });
     } finally {
-        loading.value = false;  // Stop showing "thinking"
+        loading.value = false;
+        emit('loadingChat', false)  // Stop showing "thinking"
     }
 }
 
 async function startAnalysis() {
+    toAnalyse.value = false;
     messages.value.length = 0; // A new analysis only has messages pertaining to that analysis
-    if (validateFen(props.fen.trim()).valid) {
+
+    const fenToAnalyse = validateFen(props.fen.trim()).valid ? props.fen.trim() : starting_fen
+    if (validateFen(fenToAnalyse).valid) {
         loading.value = true;
+        emit('loadingChat', true)
+        
         try {
             const analysis = await axios.post(server_url + '/analysis',
                 JSON.stringify({ fen: props.fen }),
@@ -71,18 +80,19 @@ async function startAnalysis() {
             console.error('Error querying the LLM:', error);
             messages.value.push({ role: 'assistant', content: 'Error: unable to fetch analysis.' });
         } finally {
-            loading.value = false;  // Stop showing "thinking"
+            loading.value = false;  
+            emit('loadingChat', false)
         }
     }
 }
 
 // Watcher
 watch(() => props.fen, () => {
-    startAnalysis();
+    toAnalyse.value = true;
 });
 
 function isFirstPrompt(stringToCheck) { //Shitties way to do this, but oh well
-    let isFirstPrompt = ( stringToCheck.includes("I will explain the board situation:") );
+    let isFirstPrompt = (stringToCheck.includes("I will explain the board situation:"));
     return isFirstPrompt
 }
 
@@ -93,7 +103,8 @@ function renderedMarkdown(content) {
 
 
 <template>
-    <div class="container d-flex flex-column justify-content-between overflow-auto p-3 me-0 rounded-bottom rounded-4 w-100 h-100">
+    <div
+        class="container d-flex flex-column justify-content-between overflow-auto p-3 me-0 rounded-bottom rounded-4 w-100 h-100">
         <!-- Chat Messages -->
         <div id="messages" class="flex-item">
             <div v-for="(message, i) in messages" :key="i">
@@ -116,24 +127,35 @@ function renderedMarkdown(content) {
                 </div>
             </div>
         </div>
+        <div v-if="toAnalyse" class="d-flex justify-content-center">
+            <button type="button" class="btn btn-sm m-1 text-black custom-bg-primary px-5 py-3 fw-bold" @click="startAnalysis">
+                Analyze
+            </button>
+            <!-- Input Field -->
 
-        <!-- Input Field -->
-        <input v-model="userInput" @keyup.enter="sendMessage" id="input"
-            class="flex-item border rounded px-3 py-2 mt-2 w-100 text-white" placeholder="Ask Anything!"
+        </div>
+        <input v-model="userInput" v-else @keyup.enter="sendMessage" id="input"
+            class="flex-item border rounded px-3 py-2 mt-2 w-100 text-white custom-box" placeholder="Ask Anything!"
             autocomplete="off" />
+
     </div>
 </template>
 
 <style scoped>
-
-
-#input {
+.custom-box {
     background-color: #2e2e2e;
     border-color: #2e2e2e !important;
     outline: none;
 }
-
-input::placeholder {
+.custom-bg-primary {
+    border: 2px solid #aaa23a;
+}
+.custom-bg-primary:hover {
+    border: 2px solid #aaa23a;
+    background-color: transparent;
+    color: #aaa23a !important;
+}
+#input::placeholder {
     color: #b2b2b2;
 }
 
@@ -145,7 +167,9 @@ input::placeholder {
     margin: 0% !important;
 }
 
-.spinner-border, h6 {
-    color: #aaa23a; /* Spinner color */
+.spinner-border,
+h6 {
+    color: #aaa23a;
+    /* Spinner color */
 }
 </style>

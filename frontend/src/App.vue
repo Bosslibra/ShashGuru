@@ -37,5 +37,12 @@ a:focus {
   color: #aaa23a;
 }
 
+
 </style>
 
+<style>
+/* Custom palette rules */
+.custom-bg-primary {
+  background: #aaa23a ;
+}
+</style>
