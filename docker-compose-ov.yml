@@ -8,6 +8,7 @@ services:
     ports:
       - "80:80"
       - "6666:6666"
+    restart: unless-stopped
     volumes:
       - ./config/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -31,6 +32,7 @@ services:
       dockerfile: backend/Dockerfile
     ports:
       - "5000:5000"
+    restart: unless-stopped
     volumes:
       - ./backend:/app
     environment:
@@ -40,10 +42,11 @@ services:
     image: openvino/model_server:latest
     container_name: model_server_0
     cpuset: 0-31
+    restart: unless-stopped
     expose:
     - 8000
     volumes:
-    - ./models:/workspace:ro
+    - ./ov_models:/workspace:ro
     command:
     - --rest_port
     - '8000'
@@ -54,10 +57,11 @@ services:
     image: openvino/model_server:latest
     container_name: model_server_1
     cpuset: 192-223
+    restart: unless-stopped
     expose:
     - 8000
     volumes:
-    - ./models:/workspace:ro
+    - ./ov_models:/workspace:ro
     command:
     - --rest_port
     - '8000'
@@ -68,10 +72,11 @@ services:
     image: openvino/model_server:latest
     container_name: model_server_2
     cpuset: 32-63
+    restart: unless-stopped
     expose:
     - 8000
     volumes:
-    - ./models:/workspace:ro
+    - ./ov_models:/workspace:ro
     command:
     - --rest_port
     - '8000'
@@ -82,10 +87,11 @@ services:
     image: openvino/model_server:latest
     container_name: model_server_3
     cpuset: 224-255
+    restart: unless-stopped
     expose:
     - 8000
     volumes:
-    - ./models:/workspace:ro
+    - ./ov_models:/workspace:ro
     command:
     - --rest_port
     - '8000'
@@ -96,10 +102,11 @@ services:
     image: openvino/model_server:latest
     container_name: model_server_4
     cpuset: 64-95
+    restart: unless-stopped
     expose:
     - 8000
     volumes:
-    - ./models:/workspace:ro
+    - ./ov_models:/workspace:ro
     command:
     - --rest_port
     - '8000'
@@ -110,10 +117,11 @@ services:
     image: openvino/model_server:latest
     container_name: model_server_5
     cpuset: 256-287
+    restart: unless-stopped
     expose:
     - 8000
     volumes:
-    - ./models:/workspace:ro
+    - ./ov_models:/workspace:ro
     command:
     - --rest_port
     - '8000'
@@ -124,10 +132,11 @@ services:
     image: openvino/model_server:latest
     container_name: model_server_6
     cpuset: 96-127
+    restart: unless-stopped
     expose:
     - 8000
     volumes:
-    - ./models:/workspace:ro
+    - ./ov_models:/workspace:ro
     command:
     - --rest_port
     - '8000'
@@ -138,10 +147,11 @@ services:
     image: openvino/model_server:latest
     container_name: model_server_7
     cpuset: 288-319
+    restart: unless-stopped
     expose:
     - 8000
     volumes:
-    - ./models:/workspace:ro
+    - ./ov_models:/workspace:ro
     command:
     - --rest_port
     - '8000'
@@ -152,10 +162,11 @@ services:
     image: openvino/model_server:latest
     container_name: model_server_8
     cpuset: 128-159
+    restart: unless-stopped
     expose:
     - 8000
     volumes:
-    - ./models:/workspace:ro
+    - ./ov_models:/workspace:ro
     command:
     - --rest_port
     - '8000'
@@ -166,10 +177,11 @@ services:
     image: openvino/model_server:latest
     container_name: model_server_9
     cpuset: 320-351
+    restart: unless-stopped
     expose:
     - 8000
     volumes:
-    - ./models:/workspace:ro
+    - ./ov_models:/workspace:ro
     command:
     - --rest_port
     - '8000'
@@ -180,10 +192,11 @@ services:
     image: openvino/model_server:latest
     container_name: model_server_10
     cpuset: 160-191
+    restart: unless-stopped
     expose:
     - 8000
     volumes:
-    - ./models:/workspace:ro
+    - ./ov_models:/workspace:ro
     command:
     - --rest_port
     - '8000'
@@ -194,10 +207,11 @@ services:
     image: openvino/model_server:latest
     container_name: model_server_11
     cpuset: 352-383
+    restart: unless-stopped
     expose:
     - 8000
     volumes:
-    - ./models:/workspace:ro
+    - ./ov_models:/workspace:ro
     command:
     - --rest_port
     - '8000'

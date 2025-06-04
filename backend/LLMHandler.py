@@ -44,7 +44,7 @@ def load_LLM_model(modelNumber=1):
         ## non credo vada
         #model = AutoModel.from_pretrained("OutFlankShu/MATE/both/checkpoint-1000")
 
-    model = OpenAI(base_url="http://frontend:6666/v3", api_key="unused")
+    model = OpenAI(base_url="http://frontend:6666/v1", api_key="unused")
     return None, model
 
 def __format_eval(entry):

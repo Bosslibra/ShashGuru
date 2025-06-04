@@ -1,0 +1,135 @@
+version: '3.9'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "80:80"
+      - "6666:6666"
+    restart: unless-stopped
+    volumes:
+      - ./config/nginx_vllm.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - model_server_0
+      - model_server_1
+      - model_server_2
+      - model_server_3
+      - model_server_4
+      - model_server_5
+      - backend
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app
+    environment:
+      - FLASK_ENV=development
+
+  model_server_0:
+    image: shahguru_model_server:latest
+    container_name: model_server_0
+    expose:
+      - 8000
+    cpuset: "0-31,192-223"
+    # restart: unless-stopped
+    mem_limit: 64g
+    shm_size: 16g
+    volumes:
+      - ./models:/llm/models
+    environment:
+      - PORT=8000
+      - QUANTIZATION=sym_int4
+      - MODEL_NAME=meta-llama/Llama-3.1-8B-Instruct
+    command: ./start_server.sh
+
+  model_server_1:
+    image: shahguru_model_server:latest
+    container_name: model_server_1
+    expose:
+      - 8000
+    cpuset: "32-63,224-255"
+    restart: unless-stopped
+    mem_limit: 64g
+    shm_size: 16g
+    volumes:
+      - ./models:/llm/models
+    environment:
+      - PORT=8000
+      - QUANTIZATION=sym_int4
+      - MODEL_NAME=meta-llama/Llama-3.1-8B-Instruct
+    command: ./start_server.sh
+
+  model_server_2:
+    image: shahguru_model_server:latest
+    container_name: model_server_2
+    expose:
+      - 8000
+    cpuset: "64-95,256-287"
+    restart: unless-stopped
+    mem_limit: 64g
+    shm_size: 16g
+    volumes:
+      - ./models:/llm/models
+    environment:
+      - PORT=8000
+      - QUANTIZATION=sym_int4
+      - MODEL_NAME=meta-llama/Llama-3.1-8B-Instruct
+    command: ./start_server.sh
+
+  model_server_3:
+    image: shahguru_model_server:latest
+    container_name: model_server_3
+    expose:
+      - 8000
+    cpuset: "96-127,288-319"
+    restart: unless-stopped
+    mem_limit: 64g
+    shm_size: 16g
+    volumes:
+      - ./models:/llm/models
+    environment:
+      - PORT=8000
+      - QUANTIZATION=sym_int4
+      - MODEL_NAME=meta-llama/Llama-3.1-8B-Instruct
+    command: ./start_server.sh
+
+  model_server_4:
+    image: shahguru_model_server:latest
+    container_name: model_server_4
+    expose:
+      - 8000
+    cpuset: "128-159,320-351"
+    restart: unless-stopped
+    mem_limit: 64g
+    shm_size: 16g
+    volumes:
+      - ./models:/llm/models
+    environment:
+      - PORT=8000
+      - QUANTIZATION=sym_int4
+      - MODEL_NAME=meta-llama/Llama-3.1-8B-Instruct
+    command: ./start_server.sh
+
+  model_server_5:
+    image: shahguru_model_server:latest
+    container_name: model_server_5
+    expose:
+      - 8000
+    cpuset: "160-191,352-383"
+    restart: unless-stopped
+    mem_limit: 64g
+    shm_size: 16g
+    volumes:
+      - ./models:/llm/models
+    environment:
+      - PORT=8000
+      - QUANTIZATION=sym_int4
+      - MODEL_NAME=meta-llama/Llama-3.1-8B-Instruct
+    command: ./start_server.sh
