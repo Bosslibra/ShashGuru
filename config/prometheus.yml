@@ -17,3 +17,6 @@ scrape_configs:
           - 'model_server_4:8000'
           - 'model_server_5:8000'
     metrics_path: /metrics
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: ['node_exporter:9100']
