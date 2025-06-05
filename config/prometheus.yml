@@ -1,0 +1,16 @@
+# prometheus.yaml
+global:
+  scrape_interval: 5s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: vllm
+    static_configs:
+      - targets:
+          - 'model_server_0:8000'
+          - 'model_server_1:8000'
+          - 'model_server_2:8000'
+          - 'model_server_3:8000'
+          - 'model_server_4:8000'
+          - 'model_server_5:8000'
+    metrics_path: /metrics
