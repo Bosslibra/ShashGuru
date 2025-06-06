@@ -4,7 +4,7 @@ import { TheChessboard } from 'vue3-chessboard';
 import 'vue3-chessboard/style.css';
 import {Chess} from 'chess.js'
 
-const emit = defineEmits(['updateFen']);
+const emit = defineEmits(['updateFen', 'setMovesFromPGN']);
 
 const boardAPI = ref(null);
 
@@ -79,17 +79,41 @@ function setPositionFromInput() {
   }
 }
 
-function handlePGN(){
-  var chess = new Chess();
+function handlePGN() {
+  const chess = new Chess();
+  const rawPGN = pgn.value.trim();
 
-  chess.loadPgn(pgn.value);
-  
+  const headerRegex = /\[(\w+)\s+"([^"]+)"\]/g;
+  const headers = {};
+  let match;
+
+  while ((match = headerRegex.exec(rawPGN)) !== null) {
+    headers[match[1]] = match[2];
+  }
+
+  const movesOnly = rawPGN.replace(headerRegex, '').replace(/\s+/g, ' ').trim();
+
+  chess.loadPgn(movesOnly);
+
+  if (chess.history().length === 0) {
+    alert("PGN is invalid or empty.");
+    return;
+  }
+
   const finalFEN = chess.fen();
   fen.value = finalFEN;
   emit("updateFen", finalFEN);
+  emit("setMovesFromPGN", {
+    fullPGN: rawPGN,
+    moves: chess.history(),
+    headers,
+  });
+
   boardAPI.value?.setPosition(finalFEN);
-  emit("setMovesFromPGN", chess.history())
 }
+
+
+
 
 </script>
 
@@ -158,5 +182,6 @@ button.btn:hover {
   border-color: #cdd26a;
   color: #cdd26a;
 }
+
 
 </style>

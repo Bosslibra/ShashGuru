@@ -172,4 +172,9 @@ h6 {
     color: #aaa23a;
     /* Spinner color */
 }
+
+#messages {
+    max-height: 400px;
+    overflow: auto;
+}
 </style>
