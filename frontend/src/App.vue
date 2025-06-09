@@ -1,4 +1,5 @@
 <script setup>
+import 'material-icons/iconfont/material-icons.css';
 import { RouterLink, RouterView } from 'vue-router'
 </script>
 

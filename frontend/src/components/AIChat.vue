@@ -104,7 +104,7 @@ function renderedMarkdown(content) {
 
 <template>
     <div
-        class="container d-flex flex-column justify-content-between overflow-auto p-3 me-0 rounded-bottom rounded-4 w-100 h-100">
+        class="container-fill d-flex flex-column justify-content-between overflow-auto p-3 me-0 rounded-bottom rounded-4 w-100 h-100">
         <!-- Chat Messages -->
         <div id="messages" class="flex-item">
             <div v-for="(message, i) in messages" :key="i">
@@ -128,7 +128,7 @@ function renderedMarkdown(content) {
             </div>
         </div>
         <div v-if="toAnalyse" class="d-flex justify-content-center">
-            <button type="button" class="btn btn-sm m-1 text-black custom-bg-primary px-5 py-3 fw-bold" @click="startAnalysis">
+            <button type="button" class="btn btn-sm m-1 fs-4 text-black rounded rounded-4 custom-bg-primary px-5 py-3 fw-bold" @click="startAnalysis">
                 Analyze
             </button>
             <!-- Input Field -->
@@ -176,5 +176,25 @@ h6 {
 #messages {
     max-height: 400px;
     overflow: auto;
+}
+
+/* width */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #888;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 </style>
