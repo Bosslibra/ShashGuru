@@ -33,7 +33,6 @@ const props = defineProps({
 watch(() => props.fenProp, (newFen) => {
   if (newFen && boardAPI.value) {
     fen.value = newFen;
-    console.log(fen.value)
     boardAPI.value.setPosition(newFen);
   }
 });

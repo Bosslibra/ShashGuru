@@ -82,7 +82,6 @@ function handleLoadingChat(val) {
 }
 watch(selectedMoveIndex, async () => {
   await nextTick()
-  console.log("nexticked")
   const el = moveRefs.value[selectedMoveIndex.value]
   if (el) {
     el.scrollIntoView({ behaviour: 'smooth', block: "nearest", inline: "nearest" })
