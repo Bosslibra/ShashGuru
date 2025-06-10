@@ -67,10 +67,11 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
         Please also consider, without speaking about them, that the engine consideres other 3 good moves, which are the following:
         {[m['move'] for m in bestmoves[1:]]}
         Can you please comment about the following things:
-        1) The current position of the game (for example who has a better change, but don't limit yourself on this)
+        1) The current position of the game (for example who has a better chance, but don't limit yourself on this)
         2) Your judgment about the bestmove (consider the evaluation of the engine)
-        3) Your analysis on what is going to happen
-        4) Your guess about the players strategy (for both sides)'''
+        '''
+    question3 = "3) Your analysis on what is going to happen\n"
+    question4 = "4) Your guess about the players strategy (for both sides)\n"
     prompt = "I will explain the board situation:\n" + explainedFEN + prompt
     print(prompt)
     return prompt
