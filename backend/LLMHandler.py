@@ -66,7 +66,11 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
         {"" if ponder == None else f"The engine expects that this best move will be met by {ponder} on the next move."}
         Please also consider, without speaking about them, that the engine consideres other 3 good moves, which are the following:
         {[m['move'] for m in bestmoves[1:]]}
-        Can you please explain why is the best move good? Answer without filler text, in a concise manner'''
+        Can you please comment about the following things:
+        1) The current position of the game (for example who has a better change, but don't limit yourself on this)
+        2) Your judgment about the bestmove (consider the evaluation of the engine)
+        3) Your analysis on what is going to happen
+        4) Your guess about the players strategy (for both sides)'''
     prompt = "I will explain the board situation:\n" + explainedFEN + prompt
     print(prompt)
     return prompt
