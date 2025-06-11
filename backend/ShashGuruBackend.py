@@ -14,7 +14,7 @@
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from flask import Flask, request, jsonify, json
+from flask import Flask, request, Response, stream_with_context, jsonify, json
 from flask_cors import CORS
 import argparse
 
@@ -39,9 +39,20 @@ def analysis():
     ############################
     #engine_analysis = engineCommunication.engines(fen, depth)
     #prompt = LLMHandler.create_prompt_double_engine(fen, engine_analysis)
-    analysis, chat_history = LLMHandler.query_LLM(prompt, tokenizer, model)
-    print(chat_history)
-    return jsonify(chat_history)
+
+
+    ## NON STREAM OPTION
+    #analysis, chat_history = LLMHandler.query_LLM(prompt, tokenizer, model)
+    #print(chat_history)
+
+    def generate():
+        yield "[START_STREAM]\n"  # optional: delimiter for stream start
+        for token in LLMHandler.stream_LLM(prompt, model):  # <-- stream here
+            yield token
+        yield "\n[END_STREAM]"  # optional: delimiter for stream end 
+    
+    return Response(stream_with_context(generate()), mimetype='text/plain')
+    #return jsonify(chat_history)
 
 
 @app.route("/response", methods=['GET','POST'])

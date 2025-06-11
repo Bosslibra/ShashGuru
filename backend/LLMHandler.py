@@ -135,6 +135,34 @@ def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=10):
 
     return analysis, chat_history
 
+
+def stream_LLM(prompt, model, chat_history=None, max_history=10):
+    pipe = lambda messages, max_new_tokens: model.chat.completions.create(
+        model="meta-llama/Llama-3.1-8B-Instruct",
+        messages=messages,
+        stream=True,
+        max_completion_tokens=1024,
+    )
+    if chat_history is None:
+        chat_history = []
+    chat_history = chat_history[-max_history:]
+
+    messages = [
+        {"role": "system", "content": "You are a strong chess analysis assistant..."},
+        *chat_history,
+        {"role": "user", "content": prompt}
+    ]
+
+    output = pipe(messages, max_new_tokens=1024)
+
+    for out in output:
+        if out.choices[0].finish_reason is not None:
+            break
+        delta = out.choices[0].delta.content
+        if delta:
+            yield delta
+
+
 def is_chess_related(question, tokenizer, model):
     pipe = lambda messages, max_new_tokens: model.chat.completions.create(
         model = "meta-llama/Llama-3.1-8B-Instruct",
