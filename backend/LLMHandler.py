@@ -111,7 +111,7 @@ def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=10):
     pipe = lambda messages, max_new_tokens: model.chat.completions.create(
         model = "meta-llama/Llama-3.1-8B-Instruct",
         messages=messages,
-        # max_completion_tokens=max_new_tokens,
+        max_completion_tokens=max_new_tokens,
     )
     if chat_history is None:
         chat_history = []
