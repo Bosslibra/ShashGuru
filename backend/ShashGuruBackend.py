@@ -52,7 +52,8 @@ def response():
     new_question = chat_history[-1].get("content")
     print('Received question:' , new_question)
 
-    related = LLMHandler.is_chess_related(new_question, tokenizer, model)
+    # related = LLMHandler.is_chess_related(new_question, tokenizer, model)
+    related = True
     if related:
         print("is chess related")
         answer, chat_history = LLMHandler.query_LLM(new_question, tokenizer, model, chat_history=chat_history[:-1])
