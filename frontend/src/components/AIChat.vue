@@ -63,8 +63,8 @@ async function sendMessageSTREAMED() {
     loading.value = true;
     emit('loadingChat', true);
 
-    let assistantMessage = { role: 'assistant', content: '' };
-    messages.value.push(assistantMessage); // Pre-append to fill as stream arrives
+
+
 
     try {
         const response = await fetch(server_url + '/response', {
@@ -81,24 +81,45 @@ async function sendMessageSTREAMED() {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let streamText = '';
+        let fullMessage = "";
+        let streamStarted = false;
+
+        messages.value.push({ role: 'assistant', content: '' });
 
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
+
             const chunk = decoder.decode(value, { stream: true });
-            streamText += chunk;
 
-            // Remove delimiters if needed
-            const cleanChunk = chunk
-                .replace('[START_STREAM]\n', '')
-                .replace('\n[END_STREAM]', '');
+            console.log("Received message chunk:", chunk);
 
-            assistantMessage.content += cleanChunk;
+            if (chunk.includes("[START_STREAM]")) {
+                streamStarted = true;
+                continue;
+            }
+
+            if (!streamStarted) continue;
+
+            if (chunk.includes("[END_STREAM]")) {
+                fullMessage += chunk.replace("[END_STREAM]", "");
+                break;
+            }
+
+            fullMessage += chunk;
+            messages.value[messages.value.length - 1].content = fullMessage;
+
+            // Optional: auto-scroll if needed
+            await nextTick();
+            const messagesEl = document.getElementById('messages');
+            if (messagesEl) {
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
         }
 
         // Final update (optional, you already streamed into it)
-        messages.value[messages.value.length - 1] = assistantMessage;
+        fullMessage = fullMessage.trim();
+        messages.value[messages.value.length - 1] = fullMessage;
 
     } catch (error) {
         console.error('Streaming error:', error);
@@ -137,7 +158,7 @@ async function startAnalysisSTREAMED() {
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            let fullMessage = "";
+            let fullMessageANALYSIS = "";
             let streamStarted = false;
 
             messages.value.push({ role: 'assistant', content: '' });
@@ -159,12 +180,12 @@ async function startAnalysisSTREAMED() {
                 if (!streamStarted) continue;
 
                 if (chunk.includes("[END_STREAM]")) {
-                    fullMessage += chunk.replace("[END_STREAM]", "");
+                    fullMessageANALYSIS += chunk.replace("[END_STREAM]", "");
                     break;
                 }
 
-                fullMessage += chunk;
-                messages.value[messages.value.length - 1].content = fullMessage;
+                fullMessageANALYSIS += chunk;
+                messages.value[messages.value.length - 1].content = fullMessageANALYSIS;
 
                 // Optional: auto-scroll if needed
                 await nextTick();
@@ -175,8 +196,8 @@ async function startAnalysisSTREAMED() {
             }
 
             // Final cleanup
-            fullMessage = fullMessage.trim();
-            messages.value[messages.value.length - 1].content = fullMessage;
+            fullMessageANALYSIS = fullMessageANALYSIS.trim();
+            messages.value[messages.value.length - 1].content = fullMessageANALYSIS;
 
         } catch (error) {
             console.error('Streaming error:', error);
