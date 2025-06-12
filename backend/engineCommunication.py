@@ -70,12 +70,16 @@ def call_engine(fen, depth, engine_path=engine_path_NNUE):
                     wdl_idx = parts.index("wdl") + 1
                     w = int(parts[wdl_idx])
                     d = int(parts[wdl_idx + 1])
+                    l = int(parts[wdl_idx + 2])
                     winprob = (w +(d/2))/10
 
                 bestmoves.insert(int(parts[mv_idx]) - 1, {
                     'move': move,
                     'score': score,
                     'mate': mate,
+                    'w': w,
+                    'd': d,
+                    'l': l,
                     'winprob': winprob,
                 })
             except Exception as e:
