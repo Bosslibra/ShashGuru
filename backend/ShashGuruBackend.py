@@ -63,19 +63,30 @@ def response():
     new_question = chat_history[-1].get("content")
     print('Received question:' , new_question)
 
-    related = LLMHandler.is_chess_related(new_question, tokenizer, model)
-    if related:
-        print("is chess related")
-        answer, chat_history = LLMHandler.query_LLM(new_question, tokenizer, model, chat_history=chat_history[:-1])
-        print(answer)
-    else: 
-        default_not_chess = '''Your question might not be chess-related, therefore I cannot answer it.\nIf you believe this is a false report, try to reformulate the question.'''
-        chat_history.append({ "role" : "assistant", "content": default_not_chess })
+    ### NO STREAM OPTION
+    #related = LLMHandler.is_chess_related(new_question, tokenizer, model)
+    #if related:
+    #    print("is chess related")
+    #    answer, chat_history = LLMHandler.query_LLM(new_question, tokenizer, model, chat_history=chat_history[:-1])
+    #    print(answer)
+    #else: 
+    #    default_not_chess = '''Your question might not be chess-related, therefore I cannot answer it.\nIf you believe this is a false report, try to reformulate the question.'''
+    #    chat_history.append({ "role" : "assistant", "content": default_not_chess })
     
-    #chat_history = json.dumps(chat_history)
-    print(chat_history) 
+    #print(chat_history) 
 
-    return jsonify(chat_history)
+    #return jsonify(chat_history)
+    def generate():
+        yield "[START_STREAM]\n"
+        for token in LLMHandler.stream_LLM(new_question, model, chat_history=chat_history[:-1]):
+            yield token
+        yield "\n[END_STREAM]"
+
+    return Response(stream_with_context(generate()), mimetype='text/plain')
+
+
+
+    
 
 
 

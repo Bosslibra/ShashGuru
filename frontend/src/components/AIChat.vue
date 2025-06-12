@@ -53,6 +53,66 @@ async function sendMessage() {
     }
 }
 
+
+async function sendMessageSTREAMED() {
+    if (userInput.value.trim() === '') return;
+
+    const userMessage = { role: 'user', content: userInput.value };
+    messages.value.push(userMessage);
+    userInput.value = '';
+    loading.value = true;
+    emit('loadingChat', true);
+
+    let assistantMessage = { role: 'assistant', content: '' };
+    messages.value.push(assistantMessage); // Pre-append to fill as stream arrives
+
+    try {
+        const response = await fetch(server_url + '/response', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(messages.value),
+        });
+
+        if (!response.ok || !response.body) {
+            throw new Error('Network response was not ok');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let streamText = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true });
+            streamText += chunk;
+
+            // Remove delimiters if needed
+            const cleanChunk = chunk
+                .replace('[START_STREAM]\n', '')
+                .replace('\n[END_STREAM]', '');
+
+            assistantMessage.content += cleanChunk;
+        }
+
+        // Final update (optional, you already streamed into it)
+        messages.value[messages.value.length - 1] = assistantMessage;
+
+    } catch (error) {
+        console.error('Streaming error:', error);
+        messages.value[messages.value.length - 1] = {
+            role: 'assistant',
+            content: 'Error: unable to fetch streamed response.',
+        };
+    } finally {
+        loading.value = false;
+        emit('loadingChat', false);
+    }
+}
+
+
 async function startAnalysisSTREAMED() {
     toAnalyse.value = false;
     messages.value.length = 0;
@@ -214,7 +274,7 @@ function renderedMarkdown(content) {
             <!-- Input Field -->
 
         </div>
-        <input v-model="userInput" v-else @keyup.enter="sendMessage" id="input"
+        <input v-model="userInput" v-else @keyup.enter="sendMessageSTREAMED" id="input"
             class="flex-item border rounded px-3 py-2 mt-2 w-100 text-white custom-box" placeholder="Ask Anything!"
             autocomplete="off" />
 
