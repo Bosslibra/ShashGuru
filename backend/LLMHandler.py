@@ -16,6 +16,7 @@
 
 import transformers
 from openai import OpenAI
+import logging as log
 
 # Imports that remove logging
 import warnings
@@ -25,6 +26,8 @@ from transformers.utils import logging
 from fenManipulation import fen_explainer
 
 quantization = True
+logging.basicConfig(level=logging.INFO)
+
 
 def load_LLM_model(modelNumber=1):
     
@@ -86,6 +89,7 @@ def __mapWinProb(winprob, side):
         return "Total chaos: unclear position, dynamically balanced, with no clear advantage for either side and no clear positional trends."
 
 def create_prompt_single_engine(fen, bestmoves, ponder):
+    log.basicConfig(level=log.INFO)
     explainedFEN, side = fen_explainer(fen)
     best_eval = []
     for i in range(0, len(bestmoves)):
@@ -119,7 +123,7 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
     question3 = "3) Your analysis on what is going to happen\n"
     question4 = "4) Your guess about the players strategy (for both sides)\n"
     prompt_old = "I will explain the board situation:\n" + explainedFEN + prompt_old
-    print(prompt)
+    log.info(prompt)
     return prompt
 
 def create_prompt_double_engine(fen, engine_analysis):    

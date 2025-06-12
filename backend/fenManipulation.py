@@ -84,4 +84,5 @@ def fen_explainer(fen) -> str:
     else:
         description.append(f"There is an en-passant capture on square {firstsplit[3]}.")
     explainedFEN = "\n\n".join(description)
+    print("[INFO] side:", side)
     return explainedFEN, side

@@ -94,6 +94,8 @@ def call_engine(fen, depth, engine_path=engine_path_NNUE):
 
     engine.stdin.write('quit\n')
     engine.stdin.flush()
+
+    print("[INFO] Bestmoves:", bestmoves)
     return bestmoves, ponder
 
 
