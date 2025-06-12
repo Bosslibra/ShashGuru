@@ -69,6 +69,7 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
         Can you please comment about the following things:
         1) The current position of the game (for example who has a better chance, but don't limit yourself on this)
         2) Your judgment about the bestmove (consider the evaluation of the engine)
+        Please be concise in your answer.
         '''
     question3 = "3) Your analysis on what is going to happen\n"
     question4 = "4) Your guess about the players strategy (for both sides)\n"
