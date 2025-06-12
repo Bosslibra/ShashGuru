@@ -154,6 +154,7 @@ def stream_LLM(prompt, model, chat_history=None, max_history=10):
         messages=messages,
         stream=True,
         max_completion_tokens=1024,
+        temperature=0.3,
     )
     if chat_history is None:
         chat_history = []

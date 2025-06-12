@@ -119,7 +119,7 @@ async function sendMessageSTREAMED() {
 
         // Final update (optional, you already streamed into it)
         fullMessage = fullMessage.trim();
-        messages.value[messages.value.length - 1] = fullMessage;
+        messages.value[messages.value.length - 1].content = fullMessage;
 
     } catch (error) {
         console.error('Streaming error:', error);
