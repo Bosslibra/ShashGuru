@@ -26,7 +26,6 @@ from transformers.utils import logging
 from fenManipulation import fen_explainer
 
 quantization = True
-logging.basicConfig(level=logging.INFO)
 
 
 def load_LLM_model(modelNumber=1):
