@@ -135,7 +135,8 @@ watch(selectedMoveIndex, async () => {
               @click="forwardEnd">last_page</button>
           </div>
         </div>
-        <div id="moves" class="p-4 pt-1 pb-2">
+        <div class="pe-3">
+          <div id="moves" class="p-4 pt-1 pb-2">
           <span :class="{ selected: index === selectedMoveIndex }" @click="onMoveClicked(index)"
             style="cursor:pointer; " v-for="(move, index) in moves" :key="index" :ref="el => moveRefs[index] = el">
             <span class="text-muted" v-if="index % 2 === 0">
@@ -144,6 +145,7 @@ watch(selectedMoveIndex, async () => {
             <span class="colorize px-2 p-1" v-if="index % 2 === 0">{{ move }}</span>
             <span class="colorize px-1 p-1 me-1" v-else>{{ move }}</span>
           </span>
+        </div>
         </div>
       </div>
 

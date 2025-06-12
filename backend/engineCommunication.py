@@ -64,10 +64,19 @@ def call_engine(fen, depth, engine_path=engine_path_NNUE):
                     elif parts[score_idx + 1] == "mate":
                         mate = int(parts[score_idx + 2])
 
+                # MODIFIED: Extract WDL if available
+                wdl = None
+                if "wdl" in parts:
+                    wdl_idx = parts.index("wdl") + 1
+                    w = int(parts[wdl_idx])
+                    d = int(parts[wdl_idx + 1])
+                    winprob = (w +(d/2))/10
+
                 bestmoves.insert(int(parts[mv_idx]) - 1, {
                     'move': move,
                     'score': score,
-                    'mate': mate
+                    'mate': mate,
+                    'winprob': winprob,
                 })
             except Exception as e:
                 print("Parse error:", e)

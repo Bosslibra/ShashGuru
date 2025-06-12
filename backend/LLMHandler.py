@@ -55,22 +55,54 @@ def __format_eval(entry):
             return f"{entry['score']} cp"
         return None
 
+def __mapWinProb(winprob):
+    text = ''
+    if 0 <= winprob <= 5:
+        return "Losing: a decisive disadvantage, with the position clearly leading to a loss."
+    elif 6 <= winprob <= 10:
+        return "Opponent has decisive advantage: dominant position and likely winning."
+    elif 11 <= winprob <= 15:
+        return "Opponent has clear advantage: a substantial positional advantage, but a win is not yet inevitable."
+    elif 16 <= winprob <= 20:
+        return "Opponent has a significant advantage: strong edge."
+    elif 21 <= winprob <= 24:
+        return "Slight disadvantage with a positional edge, but no immediate threats."
+    elif 25 <= winprob <= 49:
+        return "Opponent has pressure and initiative: defensive position."
+    elif winprob == 50:
+        return "Equal position. Both sides are evenly matched, with no evident advantage."
+    elif 51 <= winprob <= 75:
+        return "Initiative: playing side has pressure and can achieve an edge with active moves and forcing ideas."
+    elif 76 <= winprob <= 79:
+        return "Slight advantage: a minor positional edge, but it’s not decisive."
+    elif 80 <= winprob <= 84:
+        return "Slightly better, tending toward a clear advantage. The advantage is growing, but the position is still not decisive."
+    elif 85 <= winprob <= 89:
+        return "Clear advantage: a significant edge, but still with defensive chances."
+    elif 90 <= winprob <= 94:
+        return "Dominant position, almost decisive, not quite winning yet, but trending toward victory."
+    elif 95 <= winprob <= 100:
+        return "Winning: a decisive advantage, with victory nearly assured."
+    else:
+        return "Total chaos: unclear position, dynamically balanced, with no clear advantage for either side and no clear positional trends."
+
 def create_prompt_single_engine(fen, bestmoves, ponder):
     explainedFEN = fen_explainer(fen)
     best_eval = []
     for i in range(0, len(bestmoves)):
         best_eval.append(__format_eval(bestmoves[i]))
     print(bestmoves, best_eval)
-
-    prompt = '''
-        You are a chess engine analyst. This is the board state:'''+ explainedFEN + f'''\n
+    winProbText = __mapWinProb(bestmoves[0]['winprob'])
+    prompt = f'''
+        You are a chess engine analyst. This is the board state:{ explainedFEN }\n
+        As for the winning chances of the playing side, we can say: { winProbText }
         Explain in simple language:
 
         1. Who is better and why (positional, tactical, material).
         2. Given the best move  {bestmoves[0]['move']}, which has the score {best_eval[0]}, explain why it is the best.
-        3. Explain the idea behind each move.
+        3. The idea behind these other top moves {[m['move'] for m in bestmoves[1:]]}.
 
-        Respond concisely (try to stay inside 1000 characters).'''
+        Respond concisely (try to stay inside 800 characters).'''
     
     ## Questo causava confusione, riprovo diversamente
     prompt_old = f'''My chess engine suggests the best move {bestmoves[0]['move']} (expressed in uci standard) with the score {best_eval[0]}.
