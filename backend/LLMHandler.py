@@ -99,7 +99,7 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
         Explain in simple language:
 
         1. Who is better and why (positional, tactical, material).
-        2. Given the best move  {bestmoves[0]['move']}, which has the score {best_eval[0]}, explain why it is the best.
+        2. Given the best move  {bestmoves[0]['move']}, which has the score {best_eval[0]}, explain why it is the best (keep in mind that positive scores are advantegeous for White, negative ones for Black)
         3. The idea behind these other top moves {[m['move'] for m in bestmoves[1:]]}.
 
         Respond concisely (try to stay inside 800 characters).'''
