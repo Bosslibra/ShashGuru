@@ -1,6 +1,5 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue';
-import axios from 'axios';
 import { validateFen } from 'fentastic';
 import MarkdownIt from 'markdown-it';
 
@@ -26,6 +25,7 @@ const messages = ref([]);
 const loading = ref(false)
 const toAnalyse = ref(true);
 // Methods
+/*
 async function sendMessage() {
     if (userInput.value.trim() === '') return; //No empty messages
 
@@ -52,7 +52,7 @@ async function sendMessage() {
         emit('loadingChat', false)  // Stop showing "thinking"
     }
 }
-
+*/
 
 async function sendMessageSTREAMED() {
     if (userInput.value.trim() === '') return;
@@ -211,7 +211,7 @@ async function startAnalysisSTREAMED() {
 
 
 
-
+/*
 async function startAnalysis() {
     toAnalyse.value = false;
     messages.value.length = 0; // A new analysis only has messages pertaining to that analysis
@@ -244,7 +244,7 @@ async function startAnalysis() {
         }
     }
 }
-
+*/
 // Watcher
 watch(() => props.fen, () => {
     toAnalyse.value = true;
