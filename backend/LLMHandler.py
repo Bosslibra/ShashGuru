@@ -62,17 +62,31 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
         best_eval.append(__format_eval(bestmoves[i]))
     print(bestmoves, best_eval)
 
-    prompt = f'''My chess engine suggests the best move {bestmoves[0]['move']} (expressed in uci standard) with the score {best_eval[0]}.
+    prompt = '''
+        You are a chess engine analyst. This is the board state:'''+ explainedFEN + f'''\n
+        Explain in simple language:
+
+        1. Who is better and why (positional, tactical, material).
+        2. Given the best move  {bestmoves[0]['move']}, which has the score {best_eval[0]}, explain why it is the best.
+        3. Explain the idea behind each move.
+
+        Respond concisely (try to stay inside 1000 characters).'''
+    
+    ## Questo causava confusione, riprovo diversamente
+    prompt_old = f'''My chess engine suggests the best move {bestmoves[0]['move']} (expressed in uci standard) with the score {best_eval[0]}.
         {"" if ponder == None else f"The engine expects that this best move will be met by {ponder} on the next move."}
         Please also consider, without speaking about them, that the engine consideres other 3 good moves, which are the following:
         {[m['move'] for m in bestmoves[1:]]}
         Can you please comment about the following things:
         1) The current position of the game (for example who has a better chance, but don't limit yourself on this)
         2) Your judgment about the bestmove (consider the evaluation of the engine)
-        Answer in a concise way, without filler text'''
+
+        Please be concise in your answer.
+        '''
+
     question3 = "3) Your analysis on what is going to happen\n"
     question4 = "4) Your guess about the players strategy (for both sides)\n"
-    prompt = "I will explain the board situation:\n" + explainedFEN + prompt
+    prompt_old = "I will explain the board situation:\n" + explainedFEN + prompt_old
     print(prompt)
     return prompt
 
@@ -134,6 +148,35 @@ def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=10):
     chat_history.append({"role": "assistant", "content": analysis})
 
     return analysis, chat_history
+
+
+def stream_LLM(prompt, model, chat_history=None, max_history=10):
+    pipe = lambda messages, max_new_tokens: model.chat.completions.create(
+        model="meta-llama/Llama-3.1-8B-Instruct",
+        messages=messages,
+        stream=True,
+        max_completion_tokens=1024,
+        temperature=0.3,
+    )
+    if chat_history is None:
+        chat_history = []
+    chat_history = chat_history[-max_history:]
+
+    messages = [
+        {"role": "system", "content": "You are a strong chess analysis assistant..."},
+        *chat_history,
+        {"role": "user", "content": prompt}
+    ]
+
+    output = pipe(messages, max_new_tokens=1024)
+
+    for out in output:
+        if out.choices[0].finish_reason is not None:
+            break
+        delta = out.choices[0].delta.content
+        if delta:
+            yield delta
+
 
 def is_chess_related(question, tokenizer, model):
     pipe = lambda messages, max_new_tokens: model.chat.completions.create(

@@ -1,6 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
-import axios from 'axios';
+import { ref, watch, nextTick } from 'vue';
 import { validateFen } from 'fentastic';
 import MarkdownIt from 'markdown-it';
 
@@ -26,6 +25,7 @@ const messages = ref([]);
 const loading = ref(false)
 const toAnalyse = ref(true);
 // Methods
+/*
 async function sendMessage() {
     if (userInput.value.trim() === '') return; //No empty messages
 
@@ -52,7 +52,166 @@ async function sendMessage() {
         emit('loadingChat', false)  // Stop showing "thinking"
     }
 }
+*/
 
+async function sendMessageSTREAMED() {
+    if (userInput.value.trim() === '') return;
+
+    const userMessage = { role: 'user', content: userInput.value };
+    messages.value.push(userMessage);
+    userInput.value = '';
+    loading.value = true;
+    emit('loadingChat', true);
+
+
+
+
+    try {
+        const response = await fetch(server_url + '/response', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(messages.value),
+        });
+
+        if (!response.ok || !response.body) {
+            throw new Error('Network response was not ok');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullMessage = "";
+        let streamStarted = false;
+
+        messages.value.push({ role: 'assistant', content: '' });
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+
+            console.log("Received message chunk:", chunk);
+
+            if (chunk.includes("[START_STREAM]")) {
+                streamStarted = true;
+                continue;
+            }
+
+            if (!streamStarted) continue;
+
+            if (chunk.includes("[END_STREAM]")) {
+                fullMessage += chunk.replace("[END_STREAM]", "");
+                break;
+            }
+
+            fullMessage += chunk;
+            messages.value[messages.value.length - 1].content = fullMessage;
+
+            // Optional: auto-scroll if needed
+            await nextTick();
+            const messagesEl = document.getElementById('messages');
+            if (messagesEl) {
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+        }
+
+        // Final update (optional, you already streamed into it)
+        fullMessage = fullMessage.trim();
+        messages.value[messages.value.length - 1].content = fullMessage;
+
+    } catch (error) {
+        console.error('Streaming error:', error);
+        messages.value[messages.value.length - 1] = {
+            role: 'assistant',
+            content: 'Error: unable to fetch streamed response.',
+        };
+    } finally {
+        loading.value = false;
+        emit('loadingChat', false);
+    }
+}
+
+
+async function startAnalysisSTREAMED() {
+    toAnalyse.value = false;
+    messages.value.length = 0;
+    const fenToAnalyse = validateFen(props.fen.trim()).valid ? props.fen.trim() : starting_fen;
+
+    if (validateFen(fenToAnalyse).valid) {
+        loading.value = true;
+        emit('loadingChat', true);
+
+        try {
+            const response = await fetch(server_url + '/analysis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ fen: fenToAnalyse })
+            });
+
+            if (!response.ok || !response.body) {
+                throw new Error("Network response was not ok");
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullMessageANALYSIS = "";
+            let streamStarted = false;
+
+            messages.value.push({ role: 'assistant', content: '' });
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+
+                // Optional: log raw chunk for debugging
+                console.log("Received chunk:", chunk);
+
+                if (chunk.includes("[START_STREAM]")) {
+                    streamStarted = true;
+                    continue;
+                }
+
+                if (!streamStarted) continue;
+
+                if (chunk.includes("[END_STREAM]")) {
+                    fullMessageANALYSIS += chunk.replace("[END_STREAM]", "");
+                    break;
+                }
+
+                fullMessageANALYSIS += chunk;
+                messages.value[messages.value.length - 1].content = fullMessageANALYSIS;
+
+                // Optional: auto-scroll if needed
+                await nextTick();
+                const messagesEl = document.getElementById('messages');
+                if (messagesEl) {
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                }
+            }
+
+            // Final cleanup
+            fullMessageANALYSIS = fullMessageANALYSIS.trim();
+            messages.value[messages.value.length - 1].content = fullMessageANALYSIS;
+
+        } catch (error) {
+            console.error('Streaming error:', error);
+            messages.value.push({ role: 'assistant', content: 'Error: unable to fetch analysis.' });
+        } finally {
+            loading.value = false;
+            emit('loadingChat', false);
+        }
+    }
+}
+
+
+
+/*
 async function startAnalysis() {
     toAnalyse.value = false;
     messages.value.length = 0; // A new analysis only has messages pertaining to that analysis
@@ -61,7 +220,7 @@ async function startAnalysis() {
     if (validateFen(fenToAnalyse).valid) {
         loading.value = true;
         emit('loadingChat', true)
-        
+
         try {
             const analysis = await axios.post(server_url + '/analysis',
                 JSON.stringify({ fen: props.fen }),
@@ -80,12 +239,12 @@ async function startAnalysis() {
             console.error('Error querying the LLM:', error);
             messages.value.push({ role: 'assistant', content: 'Error: unable to fetch analysis.' });
         } finally {
-            loading.value = false;  
+            loading.value = false;
             emit('loadingChat', false)
         }
     }
 }
-
+*/
 // Watcher
 watch(() => props.fen, () => {
     toAnalyse.value = true;
@@ -111,8 +270,8 @@ function renderedMarkdown(content) {
                 <div v-if="message.role === 'user' && !isFirstPrompt(message.content)"
                     class="d-flex mb-1 justify-content-end">
                     <div class="p-3 px-4 rounded-4 ms-5" id="usermessage">
-                        <div class="text-break text-start justify-content-start message"
-                            v-html="renderedMarkdown(message.content)"></div>
+                        <div class="text-break text-start message" v-html="md.render(message.content)"></div>
+
                     </div>
                 </div>
 
@@ -128,13 +287,15 @@ function renderedMarkdown(content) {
             </div>
         </div>
         <div v-if="toAnalyse" class="d-flex justify-content-center">
-            <button type="button" class="btn btn-sm m-1 fs-4 text-black rounded rounded-4 custom-bg-primary px-5 py-3 fw-bold" @click="startAnalysis">
+            <button type="button"
+                class="btn btn-sm m-1 fs-4 text-black rounded rounded-4 custom-bg-primary px-5 py-3 fw-bold"
+                @click="startAnalysisSTREAMED">
                 Analyze
             </button>
             <!-- Input Field -->
 
         </div>
-        <input v-model="userInput" v-else @keyup.enter="sendMessage" id="input"
+        <input v-model="userInput" v-else @keyup.enter="sendMessageSTREAMED" id="input"
             class="flex-item border rounded px-3 py-2 mt-2 w-100 text-white custom-box" placeholder="Ask Anything!"
             autocomplete="off" />
 
@@ -147,14 +308,17 @@ function renderedMarkdown(content) {
     border-color: #2e2e2e !important;
     outline: none;
 }
+
 .custom-bg-primary {
     border: 2px solid #aaa23a;
 }
+
 .custom-bg-primary:hover {
     border: 2px solid #aaa23a;
     background-color: transparent;
     color: #aaa23a !important;
 }
+
 #input::placeholder {
     color: #b2b2b2;
 }
@@ -180,21 +344,19 @@ h6 {
 
 /* width */
 ::-webkit-scrollbar {
-  width: 10px;
+    width: 10px;
 }
 
 /* Track */
-::-webkit-scrollbar-track {
-  
-}
+::-webkit-scrollbar-track {}
 
 /* Handle */
 ::-webkit-scrollbar-thumb {
-  background: #888;
+    background: #888;
 }
 
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+    background: #555;
 }
 </style>
