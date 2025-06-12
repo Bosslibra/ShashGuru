@@ -62,6 +62,16 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
         best_eval.append(__format_eval(bestmoves[i]))
     print(bestmoves, best_eval)
 
+    prompt_fake = '''You are a chess engine analyst. Given a board state, explain in simple language:
+
+            1. Who is better and why (positional, tactical, material).
+            2. What are the best 1–2 candidate moves for White.
+            3. Explain the idea behind each move.
+
+            Here’s the FEN in natural english:
+            '''+ explainedFEN +'''
+
+            Respond concisely in correct English, no hallucinations, just logical chess analysis.'''
     prompt = f'''My chess engine suggests the best move {bestmoves[0]['move']} (expressed in uci standard) with the score {best_eval[0]}.
         {"" if ponder == None else f"The engine expects that this best move will be met by {ponder} on the next move."}
         Please also consider, without speaking about them, that the engine consideres other 3 good moves, which are the following:
@@ -75,7 +85,7 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
     question4 = "4) Your guess about the players strategy (for both sides)\n"
     prompt = "I will explain the board situation:\n" + explainedFEN + prompt
     print(prompt)
-    return prompt
+    return prompt_fake
 
 def create_prompt_double_engine(fen, engine_analysis):    
     explainedFEN = fen_explainer(fen)

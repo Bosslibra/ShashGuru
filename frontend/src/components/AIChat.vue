@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, nextTick} from 'vue';
+import { ref, watch, nextTick } from 'vue';
 import axios from 'axios';
 import { validateFen } from 'fentastic';
 import MarkdownIt from 'markdown-it';
@@ -99,6 +99,7 @@ async function startAnalysisSTREAMED() {
                 if (!streamStarted) continue;
 
                 if (chunk.includes("[END_STREAM]")) {
+                    fullMessage += chunk.replace("[END_STREAM]", "");
                     break;
                 }
 
@@ -138,7 +139,7 @@ async function startAnalysis() {
     if (validateFen(fenToAnalyse).valid) {
         loading.value = true;
         emit('loadingChat', true)
-        
+
         try {
             const analysis = await axios.post(server_url + '/analysis',
                 JSON.stringify({ fen: props.fen }),
@@ -157,7 +158,7 @@ async function startAnalysis() {
             console.error('Error querying the LLM:', error);
             messages.value.push({ role: 'assistant', content: 'Error: unable to fetch analysis.' });
         } finally {
-            loading.value = false;  
+            loading.value = false;
             emit('loadingChat', false)
         }
     }
@@ -205,7 +206,9 @@ function renderedMarkdown(content) {
             </div>
         </div>
         <div v-if="toAnalyse" class="d-flex justify-content-center">
-            <button type="button" class="btn btn-sm m-1 fs-4 text-black rounded rounded-4 custom-bg-primary px-5 py-3 fw-bold" @click="startAnalysisSTREAMED">
+            <button type="button"
+                class="btn btn-sm m-1 fs-4 text-black rounded rounded-4 custom-bg-primary px-5 py-3 fw-bold"
+                @click="startAnalysisSTREAMED">
                 Analyze
             </button>
             <!-- Input Field -->
@@ -224,14 +227,17 @@ function renderedMarkdown(content) {
     border-color: #2e2e2e !important;
     outline: none;
 }
+
 .custom-bg-primary {
     border: 2px solid #aaa23a;
 }
+
 .custom-bg-primary:hover {
     border: 2px solid #aaa23a;
     background-color: transparent;
     color: #aaa23a !important;
 }
+
 #input::placeholder {
     color: #b2b2b2;
 }
@@ -257,21 +263,19 @@ h6 {
 
 /* width */
 ::-webkit-scrollbar {
-  width: 10px;
+    width: 10px;
 }
 
 /* Track */
-::-webkit-scrollbar-track {
-  
-}
+::-webkit-scrollbar-track {}
 
 /* Handle */
 ::-webkit-scrollbar-thumb {
-  background: #888;
+    background: #888;
 }
 
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+    background: #555;
 }
 </style>
