@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, nextTick} from 'vue';
 import axios from 'axios';
 import { validateFen } from 'fentastic';
 import MarkdownIt from 'markdown-it';
