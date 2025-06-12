@@ -63,6 +63,7 @@ def response():
     new_question = chat_history[-1].get("content")
     print('Received question:' , new_question)
 
+
     ### NO STREAM OPTION
     #related = LLMHandler.is_chess_related(new_question, tokenizer, model)
     #if related:
@@ -72,6 +73,7 @@ def response():
     #else: 
     #    default_not_chess = '''Your question might not be chess-related, therefore I cannot answer it.\nIf you believe this is a false report, try to reformulate the question.'''
     #    chat_history.append({ "role" : "assistant", "content": default_not_chess })
+
     
     #print(chat_history) 
 

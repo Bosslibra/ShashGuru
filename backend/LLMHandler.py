@@ -112,8 +112,10 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
         Can you please comment about the following things:
         1) The current position of the game (for example who has a better chance, but don't limit yourself on this)
         2) Your judgment about the bestmove (consider the evaluation of the engine)
+
         Please be concise in your answer.
         '''
+
     question3 = "3) Your analysis on what is going to happen\n"
     question4 = "4) Your guess about the players strategy (for both sides)\n"
     prompt_old = "I will explain the board situation:\n" + explainedFEN + prompt_old
@@ -155,7 +157,7 @@ def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=10):
     pipe = lambda messages, max_new_tokens: model.chat.completions.create(
         model = "meta-llama/Llama-3.1-8B-Instruct",
         messages=messages,
-        # max_completion_tokens=max_new_tokens,
+        max_completion_tokens=max_new_tokens,
     )
     if chat_history is None:
         chat_history = []
