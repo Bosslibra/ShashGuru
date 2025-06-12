@@ -153,7 +153,8 @@ async function startAnalysisSTREAMED() {
             });
 
             if (!response.ok || !response.body) {
-                throw new Error("Network response was not ok. Response", response.ok, response.body);
+                console.error(response.ok, response.body)
+                throw new Error("Network response was not ok.");
             }
 
             const reader = response.body.getReader();
