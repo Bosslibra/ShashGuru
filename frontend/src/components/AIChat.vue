@@ -34,7 +34,7 @@ async function sendMessageSTREAMED() {
     userInput.value = '';
     loading.value = true;
     emit('loadingChat', true);
-    scrollToBottom();
+    scrollToBottom();    
 
     try {
         const response = await fetch(server_url + '/response', {
@@ -124,6 +124,8 @@ async function startAnalysisSTREAMED() {
             const decoder = new TextDecoder();
             let fullMessageANALYSIS = "";
             let streamStarted = false;
+            let promptReceived = false;
+            let systemPrompt = "";
 
             messages.value.push({ role: 'assistant', content: '' });
 
@@ -131,10 +133,34 @@ async function startAnalysisSTREAMED() {
                 const { done, value } = await reader.read();
                 if (done) break;
 
-                const chunk = decoder.decode(value, { stream: true });
+                let chunk = decoder.decode(value, { stream: true });
 
-                // Optional: log raw chunk for debugging
+                // log raw chunk for debugging
                 console.log("Received chunk:", chunk);
+
+                if (!promptReceived) {
+                    const promptEndIndex = chunk.indexOf('[PROMPT_END]');
+                    if (promptEndIndex > -1) {
+                        const promptPart = chunk.substring(0, promptEndIndex);
+                        try {
+                            const promptData = JSON.parse(promptPart);
+                            systemPrompt = promptData.prompt;
+                            promptReceived = true;
+                            
+                            // Store the system prompt as the first message
+                            messages.value.unshift({
+                                role: 'system',
+                                content: systemPrompt,
+                                hidden: true // Optional: hide from UI
+                            });
+                            
+                            // Remove the prompt part from the chunk
+                            chunk = chunk.substring(promptEndIndex + '[PROMPT_END]'.length);
+                        } catch (e) {
+                            console.error("Error parsing prompt:", e);
+                        }
+                    }
+                }
 
                 if (chunk.includes("[START_STREAM]")) {
                     streamStarted = true;
