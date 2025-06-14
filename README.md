@@ -1,22 +1,18 @@
 # ChessAnalysis
 
-A chess analyzer that takes a FEN and asks an LLM to analyse it.
-
-
-
-##### Packages
-
-At the moment I don't provide a compiled version, so you'll have to install the various packages that are used.
+A chess analyzer that takes a FEN or PGN and asks an LLM to analyse it.
 
 
 
 ##### Platforms
 
-It should work with any mainstream OS, but I have not checked. 
+It should work with Unix and Windows.
 
 Please open an issue if it doesn't. 
 
-
+### Usage
+Build and run from docker-compose-vllm.yml
+I provide a shell script on linux for starting it: "refreshDockers.sh"
 
 
 
