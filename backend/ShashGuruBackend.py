@@ -17,6 +17,8 @@
 from flask import Flask, request, Response, stream_with_context, jsonify, json
 from flask_cors import CORS
 import argparse
+import logging 
+
 
 import LLMHandler
 import engineCommunication
@@ -40,19 +42,14 @@ def analysis():
     #engine_analysis = engineCommunication.engines(fen, depth)
     #prompt = LLMHandler.create_prompt_double_engine(fen, engine_analysis)
 
-
-    ## NON STREAM OPTION
-    #analysis, chat_history = LLMHandler.query_LLM(prompt, tokenizer, model)
-    #print(chat_history)
-
     def generate():
+        yield json.dumps({"prompt": prompt}) + "\n[PROMPT_END]\n" # sends single chunk with prompt, to save it as context for responses
         yield "[START_STREAM]\n"  # optional: delimiter for stream start
         for token in LLMHandler.stream_LLM(prompt, model):  # <-- stream here
             yield token
         yield "\n[END_STREAM]"  # optional: delimiter for stream end 
     
     return Response(stream_with_context(generate()), mimetype='text/plain')
-    #return jsonify(chat_history)
 
 
 @app.route("/response", methods=['GET','POST'])
@@ -63,21 +60,6 @@ def response():
     new_question = chat_history[-1].get("content")
     print('Received question:' , new_question)
 
-
-    ### NO STREAM OPTION
-    #related = LLMHandler.is_chess_related(new_question, tokenizer, model)
-    #if related:
-    #    print("is chess related")
-    #    answer, chat_history = LLMHandler.query_LLM(new_question, tokenizer, model, chat_history=chat_history[:-1])
-    #    print(answer)
-    #else: 
-    #    default_not_chess = '''Your question might not be chess-related, therefore I cannot answer it.\nIf you believe this is a false report, try to reformulate the question.'''
-    #    chat_history.append({ "role" : "assistant", "content": default_not_chess })
-
-    
-    #print(chat_history) 
-
-    #return jsonify(chat_history)
     def generate():
         yield "[START_STREAM]\n"
         for token in LLMHandler.stream_LLM(new_question, model, chat_history=chat_history[:-1]):
@@ -113,7 +95,7 @@ if __name__ == "__main__":
         model_number = 1
 
     tokenizer, model = LLMHandler.load_LLM_model(modelNumber)
-
+    logging.info("Loaded model.")
     #THIS IS NECESSARY, DO NOT REMOVE
     app.run(host="0.0.0.0", port=5000, debug=True)
     
