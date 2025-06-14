@@ -1,5 +1,5 @@
 <script setup>
-import { ref,  watch, nextTick } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 import ChessBoard from '@/components/ChessBoard.vue';
 import AIChat from '@/components/AIChat.vue';
 import { Chess } from 'chess.js';
@@ -99,24 +99,31 @@ watch(selectedMoveIndex, async () => {
 
       <!-- PLAYER INFO -->
       <div v-if="hasPlayerInfo" id="playerInfo"
-        class="container-fill m-0 p-3 justify-content-between  text-light rounded-top " style="max-height: 100px;">
-        <div class="row mx-1">
-          <div class="col-5  fs-4 text-center ">
-            <div class="fw-bold fs-5">White:</div> {{ whitePlayer }}
-          </div>
-          <div class="col-2 px-5 align-item-center text-center">
-            <div class="fs-1 fw-bold">{{ gameResult }}</div>
-          </div>
-          <div class="col-5 fs-4 text-center">
-            <div class="fw-bold fs-5">Black:</div> {{ blackPlayer }}
-          </div>
+        class="d-flex align-items-center justify-content-between p-3 text-light rounded-top"
+        style="background-color: #33312e; border-bottom: 1px solid #ffffff1e; max-height: 100px;">
+
+        <!-- White Player -->
+        <div class="text-truncate text-center" style="flex: 1; padding-right: 2rem;">
+          <div class="fw-bold fs-6">White:</div>
+          <div class="fs-5 text-truncate">{{ whitePlayer }}</div>
+        </div>
+
+        <!-- Game Result  -->
+        <div class="flex-shrink-0 mx-auto px-3">
+          <div class="fs-3 fw-bold">{{ gameResult }}</div>
+        </div>
+
+        <!-- Black Player -->
+        <div class="text-truncate text-center" style="flex: 1; padding-left: 2rem;">
+          <div class="fw-bold fs-6">Black:</div>
+          <div class="fs-5 text-truncate">{{ blackPlayer }}</div>
         </div>
       </div>
 
 
       <!-- MOVES -->
-      <div v-if="hasMoves" class=" fs-5 ">
-        <div id="moveHeader" class="d-flex justify-content-center align-items-center  py-3">
+      <div v-if="hasMoves" class=" fs-6 ">
+        <div id="moveHeader" class="d-flex justify-content-center align-items-center  py-1">
           <div>
             <button class="btn btn-sm text-white material-icons" :disabled="selectedMoveIndex === 0"
               @click="backStart">first_page</button>
@@ -127,25 +134,25 @@ watch(selectedMoveIndex, async () => {
           </div>
           <span class=" fs-5 fw-bold text-center mx-5">Moves</span>
           <div>
-            <button class="btn btn-sm text-white material-icons" :disabled="selectedMoveIndex === moves.length -1"
+            <button class="btn btn-sm text-white material-icons" :disabled="selectedMoveIndex === moves.length - 1"
               @click="forwardOneMove">arrow_forward</button>
           </div>
           <div>
-            <button class="btn btn-sm text-white material-icons" :disabled="selectedMoveIndex === moves.length -1"
+            <button class="btn btn-sm text-white material-icons" :disabled="selectedMoveIndex === moves.length - 1"
               @click="forwardEnd">last_page</button>
           </div>
         </div>
         <div class="pe-3">
           <div id="moves" class="p-4 pt-1 pb-2">
-          <span :class="{ selected: index === selectedMoveIndex }" @click="onMoveClicked(index)"
-            style="cursor:pointer; " v-for="(move, index) in moves" :key="index" :ref="el => moveRefs[index] = el">
-            <span class="text-muted" v-if="index % 2 === 0">
-              {{ Math.floor(index / 2 + 1) }}.
+            <span :class="{ selected: index === selectedMoveIndex }" @click="onMoveClicked(index)"
+              style="cursor:pointer; " v-for="(move, index) in moves" :key="index" :ref="el => moveRefs[index] = el">
+              <span class="text-muted" v-if="index % 2 === 0">
+                {{ Math.floor(index / 2 + 1) }}.
+              </span>
+              <span class="colorize px-2 p-1" v-if="index % 2 === 0">{{ move }}</span>
+              <span class="colorize px-1 p-1 me-1" v-else>{{ move }}</span>
             </span>
-            <span class="colorize px-2 p-1" v-if="index % 2 === 0">{{ move }}</span>
-            <span class="colorize px-1 p-1 me-1" v-else>{{ move }}</span>
-          </span>
-        </div>
+          </div>
         </div>
       </div>
 
@@ -181,7 +188,7 @@ watch(selectedMoveIndex, async () => {
 }
 
 #moves {
-  max-height: 170px;
+  max-height: 130px;
   overflow: auto;
   scroll-behavior: smooth;
   border-bottom: 1px solid #ffffff1e;
@@ -191,9 +198,11 @@ watch(selectedMoveIndex, async () => {
   background-color: #2f2d2a;
   border-bottom: 1px solid #ffffff1e;
 }
+
 #moveHeader button {
   border: none;
 }
+
 #playerInfo {
   background-color: #33312e;
   border-bottom: 1px solid #ffffff1e;

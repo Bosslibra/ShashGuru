@@ -108,7 +108,7 @@ Please provide concise analysis (≤800 chars) covering:
 1. **Advantage Assessment** - Who stands better and the primary reason (material/structure/activity)
 2. **Best Move** - Why {bestmoves[0]['move']} ({best_eval[0]}) is strongest despite the evaluation
 3. **Alternative Plans** - Brief ideas behind: {[m['move'] for m in bestmoves[1:]]}
-{"" if not ponder else f"4. **Expected Response** - How {ponder} changes the situation"}
+
 
 Focus on concrete factors like:
 - Key weaknesses/squares
