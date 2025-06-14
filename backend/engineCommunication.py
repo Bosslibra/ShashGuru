@@ -45,10 +45,10 @@ def call_engine(fen, depth, engine_path=engine_path_NNUE):
 
     bestmoves = []
     ponder = None
-
+    logging.info("ENGINE OUTPUT:\n")
     while True:
         output = engine.stdout.readline().strip()
-        logging.info(f"ENGINE OUTPUT: {output}")
+        logging.info(f"{output}")
         if output.startswith(f"info depth {depth}") and "multipv" in output:
             parts = output.split()
             try:
