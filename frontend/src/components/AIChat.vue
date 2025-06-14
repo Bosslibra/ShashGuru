@@ -268,7 +268,7 @@ function renderedMarkdown(content) {
         class="container-fill d-flex flex-column  overflow-auto p-3 me-0 rounded-bottom rounded-4 w-100 h-100">
         <!-- Chat Messages -->
         <div id="messages" class=" flex-grow-1 h-100">
-            <div v-if="messages.length === 0">Welcome to ShashGuru</div>
+            <div v-if="messages.length === 0" class="fs-3 p-5 text-center me-3">Welcome to ShashGuru</div>
             <div v-for="(message, i) in messages" :key="i">
                 <div v-if="message.role === 'user'"
                     class="d-flex mb-1 justify-content-end">

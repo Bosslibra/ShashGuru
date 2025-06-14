@@ -2,7 +2,7 @@
 import { ref, reactive } from 'vue';
 import { TheChessboard } from 'vue3-chessboard';
 import 'vue3-chessboard/style.css';
-import {Chess} from 'chess.js'
+import { Chess } from 'chess.js'
 
 const emit = defineEmits(['updateFen', 'setMovesFromPGN']);
 
@@ -13,7 +13,7 @@ const boardConfig = reactive({
   coordinates: false,
   autoCastle: true,
   highlight: {
-    lastMove: true, 
+    lastMove: true,
     check: true,
   }
 });
@@ -34,13 +34,23 @@ watch(() => props.fenProp, (newFen) => {
   if (newFen && boardAPI.value) {
     fen.value = newFen;
     boardAPI.value.setPosition(newFen);
+
   }
 });
+
+
+
 //--- FINE
 
 
 const fen = ref(boardConfig.fen);
 const pgn = ref('');
+const side = ref('')
+
+watch(fen, () => {
+  side.value = fen.value.split(" ")[1]
+  console.log(side.value)
+})
 
 // --- Event Handlers ---
 
@@ -117,55 +127,43 @@ function handlePGN() {
 </script>
 
 <template>
-  <section role="region" aria-label="Board Controls" class="board-controls">
-    <button type="button" @click="toggleOrientation" class="btn btn-sm m-1">
-      Flip Board
-    </button>
-    <button type="button" @click="resetBoard" class="btn btn-sm m-1">
-      Starting Position
-    </button>
-  </section>
+  <div class="d-flex">
+    <section role="region" aria-label="Board Controls" class="board-controls">
+      <button type="button" @click="toggleOrientation" class="btn btn-sm m-1">
+        Flip Board
+      </button>
+      <button type="button" @click="resetBoard" class="btn btn-sm m-1">
+        Starting Position
+      </button>
 
-  <TheChessboard
-    :board-config="boardConfig"
-    @board-created="(api) => (boardAPI = api)"
-    @checkmate="handleCheckmate"
-    @move="handleMove"
-  />
+    </section>
+    <div v-if="side === 'w'" class="text-white p-2">White to play</div>
+    <div v-else-if="side === 'b'" class="text-white p-2">Black to play</div>
+  </div>
+  <TheChessboard :board-config="boardConfig" @board-created="(api) => (boardAPI = api)" @checkmate="handleCheckmate"
+    @move="handleMove" />
 
   <div class="fen-input-container">
-    <input
-      v-model="fen"
-      @keyup.enter="setPositionFromInput"
-      id="fenInput"
+    <input v-model="fen" @keyup.enter="setPositionFromInput" id="fenInput"
       class="flex-item border rounded px-3 py-2 mt-2 w-100 text-white bg-dark border-0"
-      placeholder="Enter FEN and press Enter"
-      autocomplete="off"
-      aria-label="FEN Input"
-    />
-    </div>
-    <div class="pgn-input-container">
-    <input
-      v-model="pgn"
-      @keyup.enter="handlePGN"
-      id="pgnInput"
+      placeholder="Enter FEN and press Enter" autocomplete="off" aria-label="FEN Input" />
+  </div>
+  <div class="pgn-input-container">
+    <input v-model="pgn" @keyup.enter="handlePGN" id="pgnInput"
       class="flex-item border rounded px-3 py-2 mt-2 w-100 text-white bg-dark border-0"
-      placeholder="Enter PGN and press Enter"
-      autocomplete="off"
-      aria-label="PGN Input"
-    />
-    </div>
+      placeholder="Enter PGN and press Enter" autocomplete="off" aria-label="PGN Input" />
+  </div>
 </template>
 
 <style scoped>
-
 .board-controls {
-  margin-bottom: 1rem; 
+  margin-bottom: 1rem;
 }
 
 .fen-input-container {
   margin-top: 0.5rem;
 }
+
 .pgn-input-container {
   margin-top: 0.5rem;
 }
@@ -173,14 +171,12 @@ function handlePGN() {
 button.btn {
   border-color: #f2f2f2;
   color: #f2f2f2;
-  background-color: transparent; 
-  transition: color 0.15s ease-in-out, border-color 0.15s ease-in-out; 
+  background-color: transparent;
+  transition: color 0.15s ease-in-out, border-color 0.15s ease-in-out;
 }
 
 button.btn:hover {
   border-color: #cdd26a;
   color: #cdd26a;
 }
-
-
 </style>
