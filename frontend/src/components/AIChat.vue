@@ -25,34 +25,6 @@ const messages = ref([]);
 const loading = ref(false)
 const toAnalyse = ref(true);
 // Methods
-/*
-async function sendMessage() {
-    if (userInput.value.trim() === '') return; //No empty messages
-
-    messages.value.push({ role: 'user', content: userInput.value });
-    userInput.value = ''; // Clear input field
-    loading.value = true;
-    emit('loadingChat', true)
-
-    try {
-        const response = await axios.post(server_url + '/response',
-            JSON.stringify(messages.value),
-            {
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }
-        );
-        messages.value = response.data
-    } catch (error) {
-        console.error('Error querying the LLM:', error);
-        messages.value.push({ role: 'assistant', content: 'Error: unable to fetch response.' });
-    } finally {
-        loading.value = false;
-        emit('loadingChat', false)  // Stop showing "thinking"
-    }
-}
-*/
 
 async function sendMessageSTREAMED() {
     if (userInput.value.trim() === '') return;
@@ -62,9 +34,7 @@ async function sendMessageSTREAMED() {
     userInput.value = '';
     loading.value = true;
     emit('loadingChat', true);
-
-
-
+    scrollToBottom();
 
     try {
         const response = await fetch(server_url + '/response', {
@@ -108,13 +78,7 @@ async function sendMessageSTREAMED() {
 
             fullMessage += chunk;
             messages.value[messages.value.length - 1].content = fullMessage;
-
-            // Optional: auto-scroll if needed
-            await nextTick();
-            const messagesEl = document.getElementById('messages');
-            if (messagesEl) {
-                messagesEl.scrollTop = messagesEl.scrollHeight;
-            }
+            scrollToBottom();
         }
 
         // Final update (optional, you already streamed into it)
@@ -123,13 +87,12 @@ async function sendMessageSTREAMED() {
 
     } catch (error) {
         console.error('Streaming error:', error);
-        messages.value[messages.value.length - 1] = {
-            role: 'assistant',
-            content: 'Error: unable to fetch streamed response.',
-        };
+        messages.value.push({ role: 'assistant', content: 'Error: unable to fetch response.' });
+        scrollToBottom();
     } finally {
         loading.value = false;
         emit('loadingChat', false);
+        console.log(messages.value)
     }
 }
 
@@ -153,7 +116,8 @@ async function startAnalysisSTREAMED() {
             });
 
             if (!response.ok || !response.body) {
-                throw new Error("Network response was not ok");
+                console.error(response.ok, response.body)
+                throw new Error("Network response was not ok.");
             }
 
             const reader = response.body.getReader();
@@ -186,13 +150,7 @@ async function startAnalysisSTREAMED() {
 
                 fullMessageANALYSIS += chunk;
                 messages.value[messages.value.length - 1].content = fullMessageANALYSIS;
-
-                // Optional: auto-scroll if needed
-                await nextTick();
-                const messagesEl = document.getElementById('messages');
-                if (messagesEl) {
-                    messagesEl.scrollTop = messagesEl.scrollHeight;
-                }
+                scrollToBottom();   
             }
 
             // Final cleanup
@@ -202,6 +160,7 @@ async function startAnalysisSTREAMED() {
         } catch (error) {
             console.error('Streaming error:', error);
             messages.value.push({ role: 'assistant', content: 'Error: unable to fetch analysis.' });
+            scrollToBottom();
         } finally {
             loading.value = false;
             emit('loadingChat', false);
@@ -210,65 +169,39 @@ async function startAnalysisSTREAMED() {
 }
 
 
-
-/*
-async function startAnalysis() {
-    toAnalyse.value = false;
-    messages.value.length = 0; // A new analysis only has messages pertaining to that analysis
-
-    const fenToAnalyse = validateFen(props.fen.trim()).valid ? props.fen.trim() : starting_fen
-    if (validateFen(fenToAnalyse).valid) {
-        loading.value = true;
-        emit('loadingChat', true)
-
-        try {
-            const analysis = await axios.post(server_url + '/analysis',
-                JSON.stringify({ fen: props.fen }),
-                {
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-            if (Array.isArray(analysis.data)) {
-                messages.value = analysis.data;
-            } else {
-                console.error('Unexpected response format:', analysis.data);
-            }
-        } catch (error) {
-            console.error('Error querying the LLM:', error);
-            messages.value.push({ role: 'assistant', content: 'Error: unable to fetch analysis.' });
-        } finally {
-            loading.value = false;
-            emit('loadingChat', false)
-        }
-    }
-}
-*/
 // Watcher
 watch(() => props.fen, () => {
     toAnalyse.value = true;
 });
-
-function isFirstPrompt(stringToCheck) { //Shitties way to do this, but oh well
-    let isFirstPrompt = (stringToCheck.includes("I will explain the board situation:"));
-    return isFirstPrompt
-}
-
+// Add this watcher
+watch(() => messages.value.length,  () => {
+   scrollToBottom();
+});
 function renderedMarkdown(content) {
     return md.render(content)
+}
+
+function scrollToBottom() {
+    nextTick(() => {
+        const messagesEl = document.getElementById('messages');
+        if (messagesEl) {
+            messagesEl.scrollTo({
+                top: messagesEl.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    });
 }
 </script>
 
 
 <template>
-    <div
-        class="container-fill d-flex flex-column justify-content-between overflow-auto p-3 me-0 rounded-bottom rounded-4 w-100 h-100">
+    <div class="container-fill d-flex flex-column  overflow-auto p-3 me-0 rounded-bottom rounded-4 w-100 h-100">
         <!-- Chat Messages -->
-        <div id="messages" class="flex-item">
+        <div id="messages" class=" flex-grow-1 h-100" style="scroll-behavior: smooth;">
+            
             <div v-for="(message, i) in messages" :key="i">
-                <div v-if="message.role === 'user' && !isFirstPrompt(message.content)"
-                    class="d-flex mb-1 justify-content-end">
+                <div v-if="message.role === 'user'" class="d-flex mb-1 justify-content-end">
                     <div class="p-3 px-4 rounded-4 ms-5" id="usermessage">
                         <div class="text-break text-start message" v-html="md.render(message.content)"></div>
 
@@ -286,19 +219,20 @@ function renderedMarkdown(content) {
                 </div>
             </div>
         </div>
-        <div v-if="toAnalyse" class="d-flex justify-content-center">
-            <button type="button"
-                class="btn btn-sm m-1 fs-4 text-black rounded rounded-4 custom-bg-primary px-5 py-3 fw-bold"
-                @click="startAnalysisSTREAMED">
-                Analyze
-            </button>
-            <!-- Input Field -->
+        <div class="flex-shrink-0">
+            <div v-if="toAnalyse" class="flex-item d-flex justify-content-center">
+                <button type="button"
+                    class="btn btn-sm m-1 fs-4 text-black rounded rounded-4 custom-bg-primary px-5 py-3 fw-bold"
+                    @click="startAnalysisSTREAMED">
+                    Analyze
+                </button>
+                <!-- Input Field -->
 
+            </div>
+            <input v-model="userInput" v-else @keyup.enter="sendMessageSTREAMED" id="input"
+                class="flex-item border rounded px-3 py-2 mt-2 w-100 text-white custom-box" placeholder="Ask Anything!"
+                autocomplete="off" />
         </div>
-        <input v-model="userInput" v-else @keyup.enter="sendMessageSTREAMED" id="input"
-            class="flex-item border rounded px-3 py-2 mt-2 w-100 text-white custom-box" placeholder="Ask Anything!"
-            autocomplete="off" />
-
     </div>
 </template>
 
@@ -338,7 +272,7 @@ h6 {
 }
 
 #messages {
-    max-height: 400px;
+
     overflow: auto;
 }
 

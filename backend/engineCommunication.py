@@ -18,7 +18,8 @@
 import subprocess
 import os
 import chess
-
+import logging
+logging.basicConfig(level=logging.INFO)
 engine_name_NNUE = 'shashchess'
 engine_name_HUMAN = 'alexander'
 engine_path_NNUE = f".\\executables\\{engine_name_NNUE}.exe" if os.name == 'nt' else f"./executables/{engine_name_NNUE}"
@@ -44,9 +45,10 @@ def call_engine(fen, depth, engine_path=engine_path_NNUE):
 
     bestmoves = []
     ponder = None
-
+    logging.info("ENGINE OUTPUT:\n")
     while True:
         output = engine.stdout.readline().strip()
+        logging.info(f"{output}")
         if output.startswith(f"info depth {depth}") and "multipv" in output:
             parts = output.split()
             try:
@@ -64,11 +66,28 @@ def call_engine(fen, depth, engine_path=engine_path_NNUE):
                     elif parts[score_idx + 1] == "mate":
                         mate = int(parts[score_idx + 2])
 
+                # MODIFIED: Extract WDL if available
+                winprob = None
+                w = None
+                d = None
+                l = None
+                if "wdl" in parts:
+                    wdl_idx = parts.index("wdl") + 1
+                    w = int(parts[wdl_idx])
+                    d = int(parts[wdl_idx + 1])
+                    l = int(parts[wdl_idx + 2])
+                    winprob = (w +(d/2))/10
+
                 bestmoves.insert(int(parts[mv_idx]) - 1, {
                     'move': move,
                     'score': score,
-                    'mate': mate
+                    'mate': mate,
+                    'w': w,
+                    'd': d,
+                    'l': l,
+                    'winprob': winprob,
                 })
+                
             except Exception as e:
                 print("Parse error:", e)
                 continue
@@ -81,6 +100,9 @@ def call_engine(fen, depth, engine_path=engine_path_NNUE):
 
     engine.stdin.write('quit\n')
     engine.stdin.flush()
+    
+    logging.info("BESTMOVES: %s", bestmoves)
+    
     return bestmoves, ponder
 
 

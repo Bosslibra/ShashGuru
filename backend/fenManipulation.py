@@ -83,5 +83,6 @@ def fen_explainer(fen) -> str:
         description.append("There are no en-passant moves to be made.")
     else:
         description.append(f"There is an en-passant capture on square {firstsplit[3]}.")
-    
-    return "\n\n".join(description)
+    explainedFEN = "\n\n".join(description)
+    print("[INFO] side:", side)
+    return explainedFEN, side

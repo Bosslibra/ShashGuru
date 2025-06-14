@@ -63,6 +63,7 @@ while True:
     if stop:
         break
         
-    
+
+
 # Footer
 print("\n\nThank you for using our ChessAnalyzer.")
