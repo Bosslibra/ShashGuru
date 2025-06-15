@@ -13,11 +13,62 @@
 #
 #You should have received a copy of the GNU General Public License
 #along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from LLMHandler import * 
 from engineCommunication import *
-from LLMHandler import *
-from colorama import Fore, Style
 #Please note that this shouldn't be used, as it is outdated and only for test purposes. Everything can be now accessed from the gui that uses ShashGuruBackend.py as a server
+
+def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=11):
+    if chat_history is None:
+        chat_history = []
+
+    chat_history = chat_history[-max_history:]
+
+    # Construct the full conversation history into a single string
+    system_prompt = (
+        "You are a strong chess analysis assistant, powered by expert-level knowledge of strategy, "
+        "tactics, and positional understanding.\n"
+        "When a user provides a move, respond with clear, insightful evaluations that include the best move, "
+        "the reasoning behind it, and any critical ideas, threats, or positional plans.\n"
+        "Avoid unnecessary filler, but enrich your answers with concrete ideas such as tactical motifs, "
+        "piece activity, material advantage, positional advantage, weaknesses, and long-term plans.\n"
+        "Use natural, chess-appropriate language. Stay strictly within the topic of chess.\n\n"
+    )
+
+    # Combine chat history with prompt
+    conversation = system_prompt
+    for message in chat_history:
+        if message["role"] == "user":
+            conversation += f"User: {message['content']}\n"
+        elif message["role"] == "assistant":
+            conversation += f"Assistant: {message['content']}\n"
+    conversation += f"User: {prompt}\nAssistant:"
+
+    # Tokenize and generate
+    inputs = tokenizer(conversation, return_tensors="pt", truncation=True).to(model.device)
+    output_tokens = model.generate(
+        **inputs,
+        max_new_tokens=1024,
+        do_sample=True,
+        temperature=0.7,
+        top_p=0.9,
+        pad_token_id=tokenizer.eos_token_id
+    )
+    output_text = tokenizer.decode(output_tokens[0], skip_special_tokens=True)
+
+    # Extract only the assistant's reply
+    if "Assistant:" in output_text:
+        analysis = output_text.split("Assistant:")[-1].strip()
+    else:
+        analysis = output_text.strip()
+
+    # Update chat history
+    chat_history.append({"role": "user", "content": prompt})
+    chat_history.append({"role": "assistant", "content": analysis})
+
+    return analysis, chat_history
+
 def chat():
     #1. Input collection
     # Starting position FEN for debug porpouses: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -29,7 +80,8 @@ def chat():
     print(f"The best move found by the engine is: {bestmoves[0]}\n")
 
     #3. LLM interaction
-    prompt = create_prompt(fen, bestmoves, ponder)
+    prompt = create_prompt_single_engine(fen, bestmoves, ponder)
+    logging.info(prompt)
     analysis, chat_history = query_LLM(prompt, tokenizer, model)
     print("AI:", analysis,"\n")
 
@@ -40,12 +92,8 @@ def chat():
             return True # Here we completely exit the program
         elif new_question in {"restart"}:
             return False # Here we exit the chat about this particular FEN
-        # Filter chess questions
-        related = is_chess_related(new_question, tokenizer, model)
-        if related:
-            answer, chat_history = query_LLM(new_question, tokenizer, model, chat_history=chat_history)
-        else: 
-            answer = '''Your question might not be chess-related, therefore I cannot answer it.\nIf you believe this is a false report, try to reformulate the question.'''
+        
+        answer, chat_history = query_LLM(new_question, tokenizer, model, chat_history=chat_history)
         print("AI:", answer, "\n")
 
 # Header
@@ -53,7 +101,8 @@ print("Welcome to ChessAnalyzer!\n")
 
 # 0. LLM model loading #TODO: desyncronize
 print("Loading LLM model. This operation may take some time.")
-tokenizer, model = load_LLM_model()
+tokenizer = AutoTokenizer.from_pretrained("Waterhorse/chessgpt-base-v1")
+model = AutoModelForCausalLM.from_pretrained("Waterhorse/chessgpt-base-v1", torch_dtype=torch.float16)
 print("Model loaded.\n")
 
 # Starting analysis
