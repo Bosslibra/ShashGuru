@@ -9,30 +9,41 @@ class ChessGPTChat:
         self.chat_history: List[str] = []
         
     def _load_model(self):
-        """Load model with optimized settings"""
+        """Load model with NPU optimized settings"""
         tokenizer = AutoTokenizer.from_pretrained("Waterhorse/chessgpt-chat-v1")
+        
+        # Try to detect NPU environment
+        if hasattr(torch, "npu") and torch.npu.is_available():
+            device = "npu"
+            torch_dtype = torch.bfloat16  # NPUs often prefer bfloat16
+        else:
+            raise RuntimeError("NPU device not found - this code requires NPU")
+        
         model = AutoModelForCausalLM.from_pretrained(
             "Waterhorse/chessgpt-chat-v1",
-            torch_dtype=torch.float16,
-            device_map="auto"
-        )
+            torch_dtype=torch_dtype,
+        ).to(device)
+        
         return tokenizer, model
+
 
     def _format_chess_prompt(self, user_input: str) -> str:
         """Special formatting for chess analysis requests"""
         if "chess position" in user_input.lower() or "fen" in user_input.lower():
             return f"[CHESS MODE]\n{user_input}\n[ANALYSIS REQUEST]\n"
         return user_input
-
+    
     def generate_response(self, user_input: str) -> str:
-        """Generate response with chess-specific optimizations"""
+        """Generate response with NPU optimizations"""
         formatted_input = self._format_chess_prompt(user_input)
         prompt = "\n".join(self.chat_history[-6:] + [f"User: {formatted_input}", "Assistant:"])
         
-        inputs = self.tokenizer(prompt, return_tensors='pt').to(self.model.device)
+        # Explicit NPU device placement
+        inputs = self.tokenizer(prompt, return_tensors='pt')
+        inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
+        
         input_length = inputs.input_ids.shape[1]
         
-        # Different parameters for chess vs regular chat
         gen_kwargs = {
             "max_new_tokens": 300 if "chess" in formatted_input.lower() else 128,
             "temperature": 0.3 if "chess" in formatted_input.lower() else 0.7,
@@ -50,7 +61,6 @@ class ChessGPTChat:
             skip_special_tokens=True
         ).strip()
         
-        # Clean up chess-specific responses
         if "chess" in formatted_input.lower():
             response = self._clean_chess_response(response)
         
