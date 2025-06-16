@@ -105,21 +105,16 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
 {explainedFEN}
 
 Current situation: {textualExtimationOfAdvantage}
-Win probability for {side}: {winPercentage}%
-Draw probability: {drawPercentage}%
-Loss probability for {side}: {lossPercentage}% 
 
 
 
 Please provide concise analysis (≤800 chars) covering:
 
 1. **Advantage Assessment** - Who stands better and the primary reason (material/structure/activity)
-2. **Best Move** - Why {bestmoves[0]['move']} (eval: {best_eval[0]}) is strongest despite the evaluation
-3. **Expected Outcome** - Who is more likely to win?  
-
-Keep in mind, without talking about them, that these are the next best moves:
-- {bestmoves[1]['move']} (eval: {best_eval[1]})
-- {bestmoves[2]['move']} (eval: {best_eval[2]})
+2. **Best Move** - Why {bestmoves[0]['move']} (eval: {best_eval[0]}) is optimal. Mention:
+   - Immediate tactical/positional gain
+   - How it addresses the position's demands
+3. **Expected Outcome** - Who is more likely to win? Mention that the percentages Win/draw/Loss for {side}: {winPercentage}%/{drawPercentage}%/{lossPercentage}%.
 
 Focus on concrete factors like:
 - Key weaknesses/squares

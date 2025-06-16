@@ -65,6 +65,7 @@ async function sendMessageSTREAMED() {
             console.log("Received message chunk:", chunk);
 
             if (chunk.includes("[START_STREAM]")) {
+                fullMessage += chunk.replace("[START_STREAM]", "")
                 streamStarted = true;
                 continue;
             }
