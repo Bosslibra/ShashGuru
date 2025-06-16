@@ -128,7 +128,7 @@ Focus on concrete factors like:
 - Immediate tactical motifs"""
 
     prompt = f'''You are a chess engine analyst. This is the board state:{ explainedFEN }\n
-{ winProbText }
+{ textualExtimationOfAdvantage }
 
 Explain in simple language:
 
