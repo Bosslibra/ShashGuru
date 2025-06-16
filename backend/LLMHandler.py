@@ -94,53 +94,61 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
     for i in range(0, len(bestmoves)):
         best_eval.append(__format_eval(bestmoves[i]))
     print(bestmoves, best_eval)
-    winProbText = __mapWinProb(bestmoves[0]['winprob'], side)
+    textualExtimationOfAdvantage = __mapWinProb(bestmoves[0]['winprob'], side)
+    winPercentage = bestmoves[0]['w']
+    drawPercentage = bestmoves[0]['d']
+    lossPercentage = bestmoves[0]['l']
     
 
-    prompt2 = f"""**Chess Position Analysis Request**
+    prompt2 = f""" **Chess Position Analysis Request**
 
 {explainedFEN}
 
-Current situation: {winProbText}
+Current situation: {textualExtimationOfAdvantage}
+Win probability for {side}: {winPercentage}%
+Draw probability: {drawPercentage}%
+Loss probability for {side}: {lossPercentage}% 
+
+
 
 Please provide concise analysis (≤800 chars) covering:
 
 1. **Advantage Assessment** - Who stands better and the primary reason (material/structure/activity)
-2. **Best Move** - Why {bestmoves[0]['move']} ({best_eval[0]}) is strongest despite the evaluation
-3. **Alternative Plans** - Brief ideas behind: {[m['move'] for m in bestmoves[1:]]}
+2. **Best Move** - Why {bestmoves[0]['move']} (eval: {best_eval[0]}) is strongest despite the evaluation
+3. **Expected Outcome** - Who is more likely to win?  
 
+Keep in mind, without talking about them, that these are the next best moves:
+- {bestmoves[1]['move']} (eval: {best_eval[1]})
+- {bestmoves[2]['move']} (eval: {best_eval[2]})
 
 Focus on concrete factors like:
 - Key weaknesses/squares
 - Piece activity/coordination
 - Pawn structure implications
 - Immediate tactical motifs"""
-    
-    
 
-    prompt = f'''
-        You are a chess engine analyst. This is the board state:{ explainedFEN }\n
-        { winProbText }
-        
-        Explain in simple language:
+    prompt = f'''You are a chess engine analyst. This is the board state:{ explainedFEN }\n
+{ winProbText }
 
-        1. Who is better and why (positional, tactical, material).
-        2. Given the best move  {bestmoves[0]['move']}, which has the score {best_eval[0]}, explain why it is the best (remind that the )
-        3. The idea behind these other top moves {[m['move'] for m in bestmoves[1:]]}.
+Explain in simple language:
 
-        Respond concisely (try to stay inside 800 characters).'''
+1. Who is better and why (positional, tactical, material).
+2. Given the best move  {bestmoves[0]['move']}, which has the score {best_eval[0]}, explain why it is the best (remind that the )
+3. The idea behind these other top moves {[m['move'] for m in bestmoves[1:]]}.
+
+Respond concisely (try to stay inside 800 characters).'''
     
     ## Questo causava confusione, riprovo diversamente
     prompt_old = f'''My chess engine suggests the best move {bestmoves[0]['move']} (expressed in uci standard) with the score {best_eval[0]}.
-        {"" if ponder == None else f"The engine expects that this best move will be met by {ponder} on the next move."}
-        Please also consider, without speaking about them, that the engine consideres other 3 good moves, which are the following:
-        {[m['move'] for m in bestmoves[1:]]}
-        Can you please comment about the following things:
-        1) The current position of the game (for example who has a better chance, but don't limit yourself on this)
-        2) Your judgment about the bestmove (consider the evaluation of the engine)
+{"" if ponder == None else f"The engine expects that this best move will be met by {ponder} on the next move."}
+Please also consider, without speaking about them, that the engine consideres other 3 good moves, which are the following:
+{[m['move'] for m in bestmoves[1:]]}
+Can you please comment about the following things:
+1) The current position of the game (for example who has a better chance, but don't limit yourself on this)
+2) Your judgment about the bestmove (consider the evaluation of the engine)
 
-        Please be concise in your answer.
-        '''
+Please be concise in your answer.
+'''
 
     question3 = "3) Your analysis on what is going to happen\n"
     question4 = "4) Your guess about the players strategy (for both sides)\n"

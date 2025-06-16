@@ -10,12 +10,12 @@ const boardAPI = ref(null);
 
 const boardConfig = reactive({
   fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // Starting FEN
-  coordinates: false,
+  coordinates: true,
   autoCastle: true,
   highlight: {
     lastMove: true,
     check: true,
-  }
+  },
 });
 
 
