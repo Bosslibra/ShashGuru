@@ -164,6 +164,7 @@ async function startAnalysisSTREAMED() {
                 }
 
                 if (chunk.includes("[START_STREAM]")) {
+                    fullMessageANALYSIS += chunk.replace("[START_STREAM]", "")
                     streamStarted = true;
                     continue;
                 }
