@@ -95,9 +95,9 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
         best_eval.append(__format_eval(bestmoves[i]))
     print(bestmoves, best_eval)
     textualExtimationOfAdvantage = __mapWinProb(bestmoves[0]['winprob'], side)
-    winPercentage = bestmoves[0]['w']
-    drawPercentage = bestmoves[0]['d']
-    lossPercentage = bestmoves[0]['l']
+    winPercentage = bestmoves[0]['w'] /10
+    drawPercentage = bestmoves[0]['d'] /10
+    lossPercentage = bestmoves[0]['l'] /10
     
 
     prompt2 = f""" **Chess Position Analysis Request**
