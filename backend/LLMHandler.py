@@ -112,7 +112,7 @@ Please provide concise analysis (≤800 chars) covering:
 
 1. **Advantage Assessment** - Who stands better and the primary reason (material/structure/activity)
 2. **Best Move** - Why is {bestmoves[0]['move']} (eval: {best_eval[0]}) the best move? Highlight 1 idea max.
-3. **Expected Outcome** - Who is more likely to win? Mention that the percentages Win/draw/Loss for {side}: {winPercentage}%/{drawPercentage}%/{lossPercentage}%.
+3. **Expected Outcome** - Give a brief summary of the winning chances, considering that the win probability for {side} is {winPercentage}%, draw probability is {drawPercentage}%, and loss probability is {lossPercentage}%.
 
 Focus on concrete factors like:
 - Key weaknesses/squares
