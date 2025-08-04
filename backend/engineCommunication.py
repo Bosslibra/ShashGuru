@@ -55,6 +55,17 @@ def call_engine(fen, depth, engine_path=engine_path_NNUE):
                 mv_idx = parts.index("multipv") + 1
                 pv_idx = parts.index("pv") + 1
                 move = parts[pv_idx]
+                move2 = parts[pv_idx + 2] if len(parts) > pv_idx + 2 else None
+                move3 = parts[pv_idx + 4] if len(parts) > pv_idx + 4 else None
+                move4 = parts[pv_idx + 6] if len(parts) > pv_idx + 6 else None
+                plan = ""
+                if move2 is not None:
+                    plan += f"{move2}"
+                if move3 is not None:   
+                    plan += f" {move3}"
+                if move4 is not None:
+                    plan += f" {move4}"
+                
 
                 # Get score
                 score = None
@@ -86,6 +97,7 @@ def call_engine(fen, depth, engine_path=engine_path_NNUE):
                     'd': d,
                     'l': l,
                     'winprob': winprob,
+                    'plan': plan
                 })
                 
             except Exception as e:

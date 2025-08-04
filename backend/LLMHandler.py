@@ -15,7 +15,7 @@
 #along with this program.  If not, see <https://www.gnu.org/licenses/>.vb
 
 import transformers
-from openai import OpenAI
+#from openai import OpenAI
 import logging as log
 
 # Imports that remove logging
@@ -27,27 +27,6 @@ from fenManipulation import fen_explainer
 
 quantization = True
 
-
-def load_LLM_model(modelNumber=1):
-    
-    # Removing logging
-    #transformers.utils.logging.disable_progress_bar()
-    logging.set_verbosity(transformers.logging.FATAL)
-    warnings.filterwarnings("ignore")
-    model_path = ""
-    #__ Llama 3.1-8B ___#
-    if modelNumber == 1: 
-            model_path = "meta-llama/Llama-3.1-8B-Instruct"
-    #__ Llama 3.2-1B ___#
-    if modelNumber == 2:
-            model_path = "meta-llama/Llama-3.2-1B"
-    #__ Llama 3.1-8B, finetuned with MATE database ___#
-    #elif modelNumber == 3: 
-        ## non credo vada
-        #model = AutoModel.from_pretrained("OutFlankShu/MATE/both/checkpoint-1000")
-
-    model = OpenAI(base_url="http://frontend:6666/v1", api_key="unused")
-    return None, model
 
 def __format_eval(entry):
         
@@ -100,6 +79,24 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
     lossPercentage = bestmoves[0]['l'] /10
     
 
+    prompt3 = f""" **Chess Position Analysis Request**
+
+{explainedFEN}
+
+Current situation: {textualExtimationOfAdvantage}
+
+Please provide concise analysis (≤800 chars) covering:
+
+1. **Advantage Assessment** - Who stands better and the primary reason (material/structure/activity)
+2. **Plan** - The best move is {bestmoves[0]['move']} (eval: {best_eval[0]}) and it considers that the principal variation (of only {side} moves) is {bestmoves[0]['plan']}. Why is the move good and what is the plan? (max 1-2 ideas).
+3. **Expected Outcome** - Give a brief summary of the winning chances, considering that the win probability for {side} is {winPercentage}%, draw probability is {drawPercentage}%, and loss probability is {lossPercentage}%.
+
+Focus on concrete factors like:
+- Key weaknesses/squares
+- Piece activity/coordination
+- Pawn structure implications
+- Immediate tactical motifs"""
+
     prompt2 = f""" **Chess Position Analysis Request**
 
 {explainedFEN}
@@ -146,8 +143,8 @@ Please be concise in your answer.
     question3 = "3) Your analysis on what is going to happen\n"
     question4 = "4) Your guess about the players strategy (for both sides)\n"
     prompt_old = "I will explain the board situation:\n" + explainedFEN + prompt_old
-    log.info(prompt2)
-    return prompt2
+    log.info(prompt3)
+    return prompt3
 
 def create_prompt_double_engine(fen, engine_analysis):    
     explainedFEN = fen_explainer(fen)
