@@ -14,6 +14,10 @@ const props = defineProps({
         type: String,
         required: true,
     },
+    engineType: {
+        type: String,
+        default: 'NNUE', // Default engine type
+    }
 });
 // Markdown
 const md = new MarkdownIt();
@@ -113,7 +117,7 @@ async function startAnalysisSTREAMED() {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ fen: fenToAnalyse })
+                body: JSON.stringify({ fen: fenToAnalyse, engine_type: props.engineType })
             });
 
             if (!response.ok || !response.body) {

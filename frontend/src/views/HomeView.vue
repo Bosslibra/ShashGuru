@@ -11,6 +11,7 @@ const hasPlayerInfo = ref(false);
 const hasMoves = ref(false)
 const selectedMoveIndex = ref(0);
 const moveRefs = ref([]);
+const engine_type = ref('NNUE');
 
 // Metadata from PGN
 const whitePlayer = ref('');
@@ -157,7 +158,28 @@ watch(selectedMoveIndex, async () => {
       </div>
 
       <!-- CHAT -->
-      <AIChat :fen="fen" @loadingChat="handleLoadingChat" />
+      <div class="flex-item">
+        <ul class="nav nav-tabs nav-fill border-0">
+          <li class="nav-item " >
+            <a class="nav-link active-custom" aria-current="page">NNUE</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="#">HUMAN</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="#">COMPARISON</a>
+          </li>
+        </ul>
+      </div>
+      <div id="chat_container" class="flex-item h-100">
+
+        <AIChat v-if="engine_type === 'NNUE'" :fen="fen" @loadingChat="handleLoadingChat" :engineType="NNUE" />
+
+        <AIChat v-else-if="engine_type === 'HUMAN'" :fen="fen" :engineType="HUMAN" @loadingChat="handleLoadingChat" />
+
+        <AIChat v-else-if="engine_type === 'HYBRID'" :fen="fen" :engineType="HYBRID" @loadingChat="handleLoadingChat" />
+
+      </div>
     </div>
   </div>
 </template>
@@ -173,6 +195,24 @@ watch(selectedMoveIndex, async () => {
 #chessboard {
   color: aliceblue;
   height: 50%;
+}
+.nav-link{
+  border: 1px rgba(01, 02, 04, 0) !important;
+}
+.nav-link:hover{
+  color: #aaa23a !important;
+  border: 1px rgba(01, 02, 04, 0) !important;
+  
+}
+.active-custom {
+  border: 0px;
+  border-bottom: 1px solid #aaa23a !important;
+  color: #aaa23a !important;
+  font-weight: bold;
+}
+.active-custom:hover{
+  border-bottom: 1px solid #aaa23a !important;
+  color: #aaa23a !important;
 }
 
 .selected>.colorize {

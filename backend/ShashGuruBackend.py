@@ -29,11 +29,12 @@ CORS(app)
 
 @app.route("/analysis", methods=['GET', 'POST'])
 def analysis():
-    fen = request.json.get('fen')  
+    fen = request.json.get('fen')
+    engine_type = request.json.get('engine_type')  # Default to NNUE engine
     print("Received analysis request for:", fen)
     depth = 15
     
-    bestmoves, ponder = engineCommunication.call_engine(fen, depth)
+    bestmoves, ponder = engineCommunication.call_engine(fen, depth, engine_type)
     prompt = LLMHandler.create_prompt_single_engine(fen, bestmoves, ponder)
 
     ############################
