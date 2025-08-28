@@ -11,6 +11,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./config/nginx_vllm.conf:/etc/nginx/nginx.conf:ro
+      - ./logs/nginx:/var/log/nginx
     depends_on:
       - model_server_0
       - model_server_1
@@ -41,7 +42,7 @@ services:
     container_name: model_server_0
     expose:
       - 8000
-    cpuset: "0-42,256-298"
+    cpuset: "0-31,192-223"
     restart: unless-stopped
     mem_limit: 64g
     shm_size: 16g
@@ -58,7 +59,7 @@ services:
     container_name: model_server_1
     expose:
       - 8000
-    cpuset: "43-84,299-340"
+    cpuset: "32-63,224-255"
     restart: unless-stopped
     mem_limit: 64g
     shm_size: 16g
@@ -75,7 +76,7 @@ services:
     container_name: model_server_2
     expose:
       - 8000
-    cpuset: "85-127,341-383"
+    cpuset: "64-95,256-287"
     restart: unless-stopped
     mem_limit: 64g
     shm_size: 16g
@@ -92,7 +93,7 @@ services:
     container_name: model_server_3
     expose:
       - 8000
-    cpuset: "128-170,384-426"
+    cpuset: "96-127,288-319"
     restart: unless-stopped
     mem_limit: 64g
     shm_size: 16g
@@ -109,7 +110,7 @@ services:
     container_name: model_server_4
     expose:
       - 8000
-    cpuset: "171-212,427-468"
+    cpuset: "128-159,320-351"
     restart: unless-stopped
     mem_limit: 64g
     shm_size: 16g
@@ -126,7 +127,7 @@ services:
     container_name: model_server_5
     expose:
       - 8000
-    cpuset: "213-255,469-511"
+    cpuset: "160-191,352-383"
     restart: unless-stopped
     mem_limit: 64g
     shm_size: 16g
