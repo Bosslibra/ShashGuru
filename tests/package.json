@@ -1,0 +1,19 @@
+{
+  "name": "shashguru-tests",
+  "version": "1.0.0",
+  "description": "End-to-end tests for ShashGuru chess website",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:ui": "playwright test --ui",
+    "install": "playwright install"
+  },
+  "keywords": ["chess", "testing", "playwright", "e2e"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}
