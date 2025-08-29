@@ -27,6 +27,9 @@ const currentNode = ref(null);
 const selectedPath = ref([]);
 const isAnalysisMode = ref(false);
 
+// Tab state
+const activeTab = ref('moves');
+
 // Engine evaluation data
 const engineEvaluation = ref({
   bestMove: null,
@@ -414,6 +417,10 @@ function toggleAnalysisMode() {
   isAnalysisMode.value = !isAnalysisMode.value;
 }
 
+function switchTab(tab) {
+  activeTab.value = tab;
+}
+
 function updateFen(newFen) {
   fen.value = newFen;
 }
@@ -632,119 +639,142 @@ watch(selectedMoveIndex, async () => {
     </div>
 
     <div class="right-panel d-flex flex-column flex-lg-row flex-fill mx-2 mx-lg-5 gap-3">
-      <!-- MOVES PANEL -->
-      <div id="moves-panel" class="moves-section rounded-4 d-flex flex-column rounded-top-4 overflow-hidden ">
-        <!-- PLAYER INFO -->
-        <div v-if="hasPlayerInfo" id="playerInfo"
-          class="d-flex align-items-center justify-content-between p-3 text-light rounded-top-4"
-          style="background-color: #33312e; border-bottom: 1px solid #ffffff1e; max-height: 100px;">
-
-          <!-- White Player -->
-          <div class="text-truncate text-center" style="flex: 1; padding-right: 1rem;">
-            <div class="fw-bold fs-6">White:</div>
-            <div class="fs-6 text-truncate">{{ whitePlayer }}</div>
-          </div>
-
-          <!-- Game Result  -->
-          <div class="flex-shrink-0 mx-auto px-2">
-            <div class="fs-4 fw-bold">{{ gameResult }}</div>
-          </div>
-
-          <!-- Black Player -->
-          <div class="text-truncate text-center" style="flex: 1; padding-left: 1rem;">
-            <div class="fw-bold fs-6">Black:</div>
-            <div class="fs-6 text-truncate">{{ blackPlayer }}</div>
-          </div>
+      <!-- TABBED PANEL -->
+      <div id="tabbed-panel" class="tabbed-section rounded-4 d-flex flex-column rounded-top-4 overflow-hidden">
+        <!-- TAB NAVIGATION -->
+        <div class="tab-navigation d-flex">
+          <button 
+            class="tab-button flex-fill py-2 px-3 border-0 fw-bold"
+            :class="{ 'tab-active': activeTab === 'moves', 'tab-inactive': activeTab !== 'moves' }"
+            @click="switchTab('moves')">
+            <i class="material-icons me-1" style="font-size: 18px;">sports_esports</i>
+            Moves
+          </button>
+          <button 
+            class="tab-button flex-fill py-2 px-3 border-0 fw-bold"
+            :class="{ 'tab-active': activeTab === 'chat', 'tab-inactive': activeTab !== 'chat' }"
+            @click="switchTab('chat')">
+            <i class="material-icons me-1" style="font-size: 18px;">chat</i>
+            AI Chat
+          </button>
         </div>
-        
-        <!-- MOVES -->
-        <div class="flex-fill">
-          <div id="moveHeader" class="d-flex justify-content-center align-items-center py-1 ">
-            <div>
-              <button class="btn btn-sm text-white material-icons" :disabled="!currentNode || !currentNode.parent"
-                @click="backStart">first_page</button>
+
+        <!-- TAB CONTENT -->
+        <div class="tab-content flex-fill d-flex flex-column">
+          <!-- MOVES TAB -->
+          <div class="tab-pane flex-fill d-flex flex-column">
+            <!-- PLAYER INFO -->
+            <div v-if="hasPlayerInfo" id="playerInfo"
+              class="d-flex align-items-center justify-content-between p-3 text-light"
+              style="background-color: #33312e; border-bottom: 1px solid #ffffff1e; max-height: 100px;">
+
+              <!-- White Player -->
+              <div class="text-truncate text-center" style="flex: 1; padding-right: 1rem;">
+                <div class="fw-bold fs-6">White:</div>
+                <div class="fs-6 text-truncate">{{ whitePlayer }}</div>
+              </div>
+
+              <!-- Game Result  -->
+              <div class="flex-shrink-0 mx-auto px-2">
+                <div class="fs-4 fw-bold">{{ gameResult }}</div>
+              </div>
+
+              <!-- Black Player -->
+              <div class="text-truncate text-center" style="flex: 1; padding-left: 1rem;">
+                <div class="fw-bold fs-6">Black:</div>
+                <div class="fs-6 text-truncate">{{ blackPlayer }}</div>
+              </div>
             </div>
-            <div>
-              <button class="btn btn-sm text-white material-icons" :disabled="!currentNode || !currentNode.parent"
-                @click="backOneMove">arrow_back</button>
-            </div>
-            <span class="fs-6 fw-bold text-center mx-2">
-              Moves
-              <span v-if="isAnalysisMode" class="badge bg-warning text-dark ms-1">Analysis</span>
-            </span>
-            <div>
-              <button class="btn btn-sm text-white material-icons" :disabled="!currentNode || !currentNode.mainLine"
-                @click="forwardOneMove">arrow_forward</button>
-            </div>
-            <div>
-              <button class="btn btn-sm text-white material-icons" :disabled="!currentNode || !currentNode.mainLine"
-                @click="forwardEnd">last_page</button>
-            </div>
-            <div class="ms-1">
-              <button class="btn btn-sm" :class="isAnalysisMode ? 'btn-warning' : 'btn-outline-light'" 
-                @click="toggleAnalysisMode" title="Toggle Analysis Mode (Shift+Enter)">
-                <i class="material-icons" style="font-size: 18px;">analytics</i>
-              </button>
-            </div>
-            <div class="ms-1">
-              <button class="btn btn-sm btn-outline-info" 
-                @click="fetchEvaluationsForMoves" 
-                :disabled="isLoadingEvaluations"
-                title="Fetch Evaluations">
-                <span v-if="isLoadingEvaluations" class="spinner-border spinner-border-sm me-1" role="status"></span>
-                <i class="material-icons" style="font-size: 18px;">assessment</i>
-              </button>
-            </div>
-          </div>
-          <div class="pe-2">
-            <div id="moves" class="px-3 pt-3 pb-2">
-              <!-- Engine Lines Display -->
-              <EngineLines 
-                v-if="(engineEvaluation && engineEvaluation.lines && engineEvaluation.lines.length > 0) || isEngineEvaluationLoading"
-                :lines="engineEvaluation.lines"
-                :maxLines="showLines"
-                :depth="engineEvaluation.depth"
-                :currentFen="currentNode?.fen || ''"
-                :loading="isEngineEvaluationLoading"
-                @move-clicked="handleEngineLineMove"
-                class="mb-3"
-              />
-              <div v-if="hasMoves" class="move-tree shadow">
-                <div class="moves-header rounded-top ">
-                  <span class="header-text fs-6">Moves</span>
-                </div> 
-                  <div class="moves-body ps-2 rounded-bottom ">
-                  <MoveTreeDisplay 
-                    :node="moveTree" 
-                    :currentNode="currentNode" 
-                    :selectedPath="selectedPath"
-                    :engineEvaluation="engineEvaluation"
-                    :showLines="showLines"
-                    :isEvaluationLoading="isEngineEvaluationLoading"
-                    @nodeClicked="navigateToNode"
-                    @addMove="addMove"
-                    @setShashinType="setShashinType"
-                    @setMoveEvaluation="setMoveEvaluation"
-                    @promoteVariation="promoteVariation"
-                    @deleteMove="deleteMove"
-                    :isAnalysisMode="isAnalysisMode"
-                  />
+            
+            <!-- MOVES -->
+            <div v-show="activeTab === 'moves'" class="flex-fill">
+              <div id="moveHeader" class="d-flex justify-content-center align-items-center py-1 ">
+                <div>
+                  <button class="btn btn-sm text-white material-icons" :disabled="!currentNode || !currentNode.parent"
+                    @click="backStart">first_page</button>
+                </div>
+                <div>
+                  <button class="btn btn-sm text-white material-icons" :disabled="!currentNode || !currentNode.parent"
+                    @click="backOneMove">arrow_back</button>
+                </div>
+                <span class="fs-6 fw-bold text-center mx-2">
+                  <span v-if="isAnalysisMode" class="badge bg-warning text-dark ms-1">Analysis</span>
+                </span>
+                <div>
+                  <button class="btn btn-sm text-white material-icons" :disabled="!currentNode || !currentNode.mainLine"
+                    @click="forwardOneMove">arrow_forward</button>
+                </div>
+                <div>
+                  <button class="btn btn-sm text-white material-icons" :disabled="!currentNode || !currentNode.mainLine"
+                    @click="forwardEnd">last_page</button>
+                </div>
+                <div class="ms-1">
+                  <button class="btn btn-sm" :class="isAnalysisMode ? 'btn-warning' : 'btn-outline-light'" 
+                    @click="toggleAnalysisMode" title="Toggle Analysis Mode (Shift+Enter)">
+                    <i class="material-icons" style="font-size: 18px;">analytics</i>
+                  </button>
+                </div>
+                <div class="ms-1">
+                  <button class="btn btn-sm btn-outline-info" 
+                    @click="fetchEvaluationsForMoves" 
+                    :disabled="isLoadingEvaluations"
+                    title="Fetch Evaluations">
+                    <span v-if="isLoadingEvaluations" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    <i class="material-icons" style="font-size: 18px;">assessment</i>
+                  </button>
                 </div>
               </div>
-              <div v-if="!hasMoves && !isAnalysisMode" class="text-secondary text-center">
-                Load a PGN or make moves on the board to begin analysis
+              <div class="pe-2">
+                <div id="moves" class="px-3 pt-3 pb-2">
+                  <!-- Engine Lines Display -->
+                  <EngineLines 
+                    v-if="(engineEvaluation && engineEvaluation.lines && engineEvaluation.lines.length > 0) || isEngineEvaluationLoading"
+                    :lines="engineEvaluation.lines"
+                    :maxLines="showLines"
+                    :depth="engineEvaluation.depth"
+                    :currentFen="currentNode?.fen || ''"
+                    :loading="isEngineEvaluationLoading"
+                    @move-clicked="handleEngineLineMove"
+                    class="mb-3"
+                  />
+                  <div v-if="hasMoves" class="move-tree shadow">
+                    <div class="moves-header rounded-top ">
+                      <span class="header-text fs-6">Moves</span>
+                    </div> 
+                      <div class="moves-body ps-2 rounded-bottom ">
+                      <MoveTreeDisplay 
+                        :node="moveTree" 
+                        :currentNode="currentNode" 
+                        :selectedPath="selectedPath"
+                        :engineEvaluation="engineEvaluation"
+                        :showLines="showLines"
+                        :isEvaluationLoading="isEngineEvaluationLoading"
+                        @nodeClicked="navigateToNode"
+                        @addMove="addMove"
+                        @setShashinType="setShashinType"
+                        @setMoveEvaluation="setMoveEvaluation"
+                        @promoteVariation="promoteVariation"
+                        @deleteMove="deleteMove"
+                        :isAnalysisMode="isAnalysisMode"
+                      />
+                    </div>
+                  </div>
+                  <div v-if="!hasMoves && !isAnalysisMode" class="text-secondary text-center">
+                    Load a PGN or make moves on the board to begin analysis
+                  </div>
+                  <div v-if="!hasMoves && isAnalysisMode" class="text-secondary text-center">
+                    <i class="material-icons me-2">info</i>Analysis mode enabled - make moves on the board or use arrow keys to navigate
+                  </div>
+                </div>
               </div>
-              <div v-if="!hasMoves && isAnalysisMode" class="text-secondary text-center">
-                <i class="material-icons me-2">info</i>Analysis mode enabled - make moves on the board or use arrow keys to navigate
-              </div>
+            </div>
+
+            <!-- CHAT TAB -->
+            <div v-show="activeTab === 'chat'" id="chat-view" class="tab-pane chat-section flex-fill rounded-4 d-flex flex-column">
+              <AIChat :fen="fen" @loadingChat="handleLoadingChat" />
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- CHAT PANEL -->
-      <div id="chat-view" class="chat-section flex-fill rounded-4 d-flex flex-column">
-        <AIChat :fen="fen" @loadingChat="handleLoadingChat" />
       </div>
     </div>
   </div>
@@ -753,15 +783,46 @@ watch(selectedMoveIndex, async () => {
 
 
 <style scoped>
-#chat-view {
+.tabbed-section {
   background-color: #262421;
+  min-width: 600px;
   height: 80vh;
+  flex: 1;
 }
 
-.chat-section {
+.tab-navigation {
+  background-color: #1a1916;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.tab-button {
+  background-color: transparent;
+  color: #b2b2b2;
+  transition: all 0.3s ease;
+  border-bottom: 3px solid transparent !important;
+}
+
+.tab-button:hover {
+  background-color: #2a2824;
+  color: #e8e8e8;
+}
+
+.tab-active {
+  background-color: #262421 !important;
+  color: #aaa23a !important;
+  border-bottom: 3px solid #aaa23a !important;
+}
+
+.tab-inactive {
+  background-color: #1a1916;
+}
+
+.tab-content {
   background-color: #262421;
-  min-width: 400px;
-  flex: 1;
+}
+
+.tab-pane {
+  overflow: hidden;
 }
 
 .moves-section {
@@ -770,6 +831,12 @@ watch(selectedMoveIndex, async () => {
   max-width: 500px;
   height: 80vh;
   flex: 0 0 auto;
+}
+
+.chat-section {
+  background-color: #262421;
+  min-width: 400px;
+  flex: 1;
 }
 
 .moves-header {

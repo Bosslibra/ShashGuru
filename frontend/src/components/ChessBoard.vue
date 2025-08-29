@@ -323,7 +323,7 @@ onUnmounted(() => {
             @board-created="handleBoardCreated" 
             @checkmate="handleCheckmate"
             @move="handleMove" 
-            style="max-height: 70vh; max-width: 50vmin"
+            style="max-height: 70vh; max-width: 70vmin"
             class=""
           />
         </div>
