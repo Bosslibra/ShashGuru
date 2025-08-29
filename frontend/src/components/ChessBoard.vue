@@ -285,7 +285,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="chessboard-container" style="max-width: 40vw;" >
+  <div class="chessboard-container" >
     <div class="board-section w-100">
       <div class="d-flex">
         <section role="region" aria-label="Board Controls" class="board-controls">
@@ -323,7 +323,7 @@ onUnmounted(() => {
             @board-created="handleBoardCreated" 
             @checkmate="handleCheckmate"
             @move="handleMove" 
-            style="max-height: 70vh; max-width: 70vmin; min-width: 50vh;"
+            style="max-height: 70vh; max-width: 70vmin; min-width: 50vmin; "
             class=""
           />
         </div>
