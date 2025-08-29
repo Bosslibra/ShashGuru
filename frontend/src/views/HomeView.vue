@@ -687,7 +687,7 @@ watch(selectedMoveIndex, async () => {
             </div>
             
             <!-- MOVES -->
-            <div v-show="activeTab === 'moves'" class="flex-fill">
+            <div v-if="activeTab === 'moves'" class="flex-fill">
               <div id="moveHeader" class="d-flex justify-content-center align-items-center py-1 ">
                 <div>
                   <button class="btn btn-sm text-white material-icons" :disabled="!currentNode || !currentNode.parent"
@@ -770,7 +770,7 @@ watch(selectedMoveIndex, async () => {
             </div>
 
             <!-- CHAT TAB -->
-            <div v-show="activeTab === 'chat'" id="chat-view" class="tab-pane chat-section flex-fill rounded-4 d-flex flex-column">
+            <div v-if="activeTab === 'chat'" id="chat-view" class="tab-pane chat-section flex-fill rounded-4 d-flex flex-column">
               <AIChat :fen="fen" @loadingChat="handleLoadingChat" />
             </div>
           </div>
