@@ -17,17 +17,6 @@ on:
     # Run tests daily at 6 AM UTC
     - cron: '0 6 * * *'
   workflow_dispatch:
-    inputs:
-      browser:
-        description: 'Browser to test with'
-        required: false
-        default: 'chromium'
-        type: choice
-        options:
-          - chromium
-          - firefox
-          - webkit
-          - all
 
 jobs:
   test:
@@ -36,7 +25,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        browser: ${{ github.event.inputs.browser == 'all' && fromJSON('["chromium", "firefox", "webkit"]') || fromJSON(format('["{0}"]', github.event.inputs.browser || 'chromium')) }}
+        # Only use chromium since other browsers are disabled in config
+        browser: [chromium]
     
     steps:
     - uses: actions/checkout@v4
@@ -44,20 +34,31 @@ jobs:
     - uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: tests/package-lock.json
+
+    - name: Cache node modules
+      uses: actions/cache@v3
+      with:
+        path: tests/node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('tests/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
 
     - name: Install dependencies
       working-directory: ./tests
-      run: npm ci
+      run: |
+        if [ -f package-lock.json ]; then
+          npm ci
+        else
+          npm install
+        fi
 
     - name: Install Playwright Browsers
       working-directory: ./tests
-      run: npx playwright install --with-deps ${{ matrix.browser }}
+      run: npx playwright install chromium --with-deps
 
     - name: Run Playwright tests
       working-directory: ./tests
-      run: npx playwright test --project=${{ matrix.browser }}
+      run: npx playwright test
       env:
         CI: true
 
@@ -130,4 +131,4 @@ jobs:
         echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Browser**: ${{ github.event.inputs.browser || 'chromium' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Browser**: chromium" >> $GITHUB_STEP_SUMMARY
