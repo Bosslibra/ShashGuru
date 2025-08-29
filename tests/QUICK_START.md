@@ -215,15 +215,23 @@ Tests use precise selectors matching Vue.js components:
 ## 📈 CI/CD Integration
 
 ### GitHub Actions
-The test suite includes automated CI/CD:
+The test suite includes automated CI/CD via `../.github/workflows/e2e-tests.yml`:
 ```yaml
 - name: Run E2E Tests
+  working-directory: ./tests
   run: |
-    cd tests
     npm ci
     npx playwright install
     ./run-tests.sh
 ```
+
+Features:
+- Runs on push/PR to main branches
+- Daily scheduled runs at 6 AM UTC
+- Manual trigger with browser selection
+- Multi-browser testing matrix
+- Artifact collection for debugging
+- Website health checks
 
 ### Local Development
 For local testing:

@@ -186,11 +186,22 @@ These tests run against the live ShashGuru application:
 ## 🧩 Integration
 
 ### CI/CD Pipeline
-Tests integrate with GitHub Actions:
+Tests integrate with GitHub Actions via the workflow file located at:
+```
+.github/workflows/e2e-tests.yml
+```
+
+The workflow runs automatically on:
+- Push to main/develop branches (when test files change)
+- Pull requests to main branch
+- Daily schedule (6 AM UTC)
+- Manual trigger with browser selection
+
+Example workflow usage:
 ```yaml
 - name: Run Playwright Tests
+  working-directory: ./tests
   run: |
-    cd tests
     npm ci
     npx playwright install
     npx playwright test
@@ -233,4 +244,4 @@ When adding new tests:
 - `QUICK_START.md`: Quick setup and execution guide
 - `playwright.config.js`: Detailed configuration options
 - `run-tests.sh`: Convenient test runner script
-- `.github/workflows/`: CI/CD pipeline definitions
+- `../.github/workflows/e2e-tests.yml`: CI/CD pipeline configuration
