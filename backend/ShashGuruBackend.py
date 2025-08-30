@@ -32,9 +32,9 @@ CORS(app)
 def analysis():
     fen = request.json.get('fen')  
     print("Received analysis request for:", fen)
-    depth = 15
-    
-    bestmoves, ponder = engineCommunication.call_engine(fen, depth, lines=3)
+    depth = request.json.get('depth', 20)
+
+    bestmoves, ponder = engineCommunication.call_engine(fen, depth, lines=1)
     prompt = LLMHandler.create_prompt_single_engine(fen, bestmoves, ponder)
 
     ############################

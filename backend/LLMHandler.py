@@ -28,6 +28,18 @@ import chess
 
 quantization = True
 
+SYSTEM_MESSAGE = f'''
+You are a concise chess analysis assistant. For initial position analysis, provide brief, accurate insights based only on the given information.
+Focus on the most important aspects: the recommended move and its purpose.
+Keep responses short (2-3 sentences max). Avoid speculation or moves not mentioned in the analysis.
+Use clear, natural chess language without unnecessary elaboration.
+
+For follow-up questions, refer back to the position and engine analysis provided in the conversation context.
+Maintain the same brevity and focus on concrete information when answering follow-ups.
+
+If asked about moves that were not analyzed by the engine, respond that you don't have analysis for those moves and suggest the user try those moves on the board and re-run the analysis to get engine evaluation for them.
+'''
+
 
 def load_LLM_model(modelNumber=1):
     
@@ -91,10 +103,12 @@ def __mapWinProb(winprob, side):
 def generate_line(line, board):
     tmp_board = board.copy()
     san_line = []
-    for move in line:
+    for idx, move in enumerate(line):
         uci_move = chess.Move.from_uci(move)
         san_move = tmp_board.san(uci_move)
-        san_line.append(san_move)
+        if idx > 0:
+            # Skip the first move
+            san_line.append(san_move)
         tmp_board.push(uci_move)
     return " ".join(san_line)
 
@@ -199,10 +213,12 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
 
 {position_context}
 
-The engine recommends {best_move_san}, leading to the continuation {continuation}. The position evaluation shows that {win_prob_text.lower()}. 
+The engine recommends {side} to play {best_move_san}, leading to the continuation {continuation}. The position evaluation shows that {win_prob_text.lower()}. 
 
 In 2-3 sentences, explain why {best_move_san} is the strongest choice and what this evaluation means for {side}'s position. Focus only on the concrete information provided."""
     
+    log.info("Generated prompt for single engine:")
+    log.info(prompt) 
     return prompt
 
 def create_prompt_double_engine(fen, engine_analysis):    
@@ -247,17 +263,7 @@ def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=10):
     chat_history = chat_history[-max_history:]
     
     messages = [
-        {"role": "system", "content": f'''
-         You are a concise chess analysis assistant. For initial position analysis, provide brief, accurate insights based only on the given information.
-         Focus on the most important aspects: the recommended move and its purpose.
-         Keep responses short (2-3 sentences max). Avoid speculation or moves not mentioned in the analysis.
-         Use clear, natural chess language without unnecessary elaboration.
-         
-         For follow-up questions, refer back to the position and engine analysis provided in the conversation context.
-         Maintain the same brevity and focus on concrete information when answering follow-ups.
-         
-         If asked about moves that were not analyzed by the engine, respond that you don't have analysis for those moves and suggest the user try those moves on the board and re-run the analysis to get engine evaluation for them.
-         '''}
+        {"role": "system", "content": SYSTEM_MESSAGE}
     ] + chat_history + [
         {"role": "user", "content": prompt}
     ]
@@ -283,17 +289,7 @@ def stream_LLM(prompt, model, chat_history=None, max_history=10):
     chat_history = chat_history[-max_history:]
 
     messages = [
-        {"role": "system", "content": '''
-         You are a concise chess analysis assistant. For initial position analysis, provide brief, accurate insights based only on the given information.
-         Focus on the most important aspects: the recommended move and its purpose.
-         Keep responses short (2-3 sentences max). Avoid speculation or moves not mentioned in the analysis.
-         Use clear, natural chess language without unnecessary elaboration.
-         
-         For follow-up questions, refer back to the position and engine analysis provided in the conversation context.
-         Maintain the same brevity and focus on concrete information when answering follow-ups.
-         
-         If asked about moves that were not analyzed by the engine, respond that you don't have analysis for those moves and suggest the user try those moves on the board and re-run the analysis to get engine evaluation for them.
-         '''},
+        {"role": "system", "content": SYSTEM_MESSAGE},
         *chat_history,
         {"role": "user", "content": prompt}
     ]

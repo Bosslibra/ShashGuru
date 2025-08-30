@@ -14,6 +14,10 @@ const props = defineProps({
         type: String,
         required: true,
     },
+    depth: {
+        type: Number,
+        required: true,
+    }
 });
 // Markdown
 const md = new MarkdownIt();
@@ -116,7 +120,10 @@ async function startAnalysisSTREAMED() {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ fen: fenToAnalyse })
+                body: JSON.stringify({ 
+                    fen: fenToAnalyse,
+                    depth: props.depth,
+                })
             });
 
             if (!response.ok || !response.body) {
