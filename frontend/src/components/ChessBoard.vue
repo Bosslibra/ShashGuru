@@ -93,6 +93,15 @@ const side = ref('')
 watch(fen, () => {
   side.value = fen.value.split(" ")[1]
   console.log(side.value)
+  // Update board position when FEN changes
+  if (fen.value.trim() && boardAPI.value) {
+    try {
+      boardAPI.value.setPosition(fen.value.trim());
+      emit("updateFen", fen.value.trim());
+    } catch (error) {
+      console.error('Invalid FEN position:', error);
+    }
+  }
 })
 
 // --- Event Handlers ---
@@ -202,14 +211,6 @@ function resetBoard() {
   nextTick(() => {
     updateChessboardHeight();
   });
-}
-
-function setPositionFromInput() {
-  const trimmedFen = fen.value.trim();
-  if (trimmedFen) {
-    boardAPI.value?.setPosition(trimmedFen);
-    emit("updateFen", trimmedFen);
-  }
 }
 
 function handlePGN() {
@@ -332,9 +333,9 @@ onUnmounted(() => {
       <div class="fen-input-container w-100">
         <div class="input-group flex-nowrap mt-2">
           <span class="input-group-text text-white bg-light bg-opacity-25 border border-0 font-monospace">FEN</span>
-          <input v-model="fen" @keyup.enter="setPositionFromInput" id="fenInput"
+          <input v-model="fen" id="fenInput"
             class="  form-control border px-3 py-2 text-white bg-dark border-0"
-            placeholder="Enter FEN and press Enter" autocomplete="off" aria-label="FEN Input" />
+            placeholder="Enter FEN (updates automatically)" autocomplete="off" aria-label="FEN Input" />
         </div>
       </div>
       <div class="pgn-input-container">
