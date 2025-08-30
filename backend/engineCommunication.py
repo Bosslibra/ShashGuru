@@ -38,7 +38,7 @@ class EnginePool:
     """
     Manages a pool of pre-initialized UCI chess engines for better performance.
     """
-    def __init__(self, engine_path, pool_size=16):
+    def __init__(self, engine_path, pool_size=8):
         self.engine_path = engine_path
         self.pool_size = pool_size
         self.available_engines = queue.Queue()
@@ -177,7 +177,7 @@ def _initialize_nnue_pool():
     
     logging.info("Initializing NNUE engine pool at startup...")
     try:
-        _nnue_pool = EnginePool(engine_path_NNUE, pool_size=4)
+        _nnue_pool = EnginePool(engine_path_NNUE, pool_size=8)
         logging.info("NNUE engine pool initialized successfully at startup")
     except Exception as e:
         logging.error(f"Failed to initialize NNUE engine pool at startup: {e}")
@@ -191,16 +191,16 @@ def _get_engine_pool(engine_path):
         if engine_path == engine_path_NNUE:
             if _nnue_pool is None:
                 logging.warning("NNUE pool not initialized at startup, creating now...")
-                _nnue_pool = EnginePool(engine_path, pool_size=4)
+                _nnue_pool = EnginePool(engine_path, pool_size=8)
             return _nnue_pool
         elif engine_path == engine_path_HUMAN:
             if _human_pool is None:
                 logging.info("Lazy initializing HUMAN engine pool...")
-                _human_pool = EnginePool(engine_path, pool_size=4)
+                _human_pool = EnginePool(engine_path, pool_size=8)
             return _human_pool
         else:
             # For other engine paths, create a temporary pool
-            return EnginePool(engine_path, pool_size=4)
+            return EnginePool(engine_path, pool_size=8)
 
 def _cleanup_pools():
     """Cleanup function called on exit."""

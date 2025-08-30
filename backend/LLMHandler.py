@@ -24,6 +24,7 @@ from transformers.utils import logging
 
 # Import for prompt creation
 from fenManipulation import fen_explainer
+import chess
 
 quantization = True
 
@@ -87,66 +88,122 @@ def __mapWinProb(winprob, side):
     else:
         return "Total chaos: unclear position, dynamically balanced, with no clear advantage for either side and no clear positional trends."
 
+def generate_line(line, board):
+    tmp_board = board.copy()
+    san_line = []
+    for move in line:
+        uci_move = chess.Move.from_uci(move)
+        san_move = tmp_board.san(uci_move)
+        san_line.append(san_move)
+        tmp_board.push(uci_move)
+    return " ".join(san_line)
+
+def analyze_position_context(fen, board):
+    """Generate additional context about the position for the LLM"""
+    context = []
+    
+    # Material count
+    material = {
+        chess.PAWN: 1, chess.KNIGHT: 3, chess.BISHOP: 3, 
+        chess.ROOK: 5, chess.QUEEN: 9, chess.KING: 0
+    }
+    
+    white_material = sum(material[piece.piece_type] for piece in board.piece_map().values() if piece.color == chess.WHITE)
+    black_material = sum(material[piece.piece_type] for piece in board.piece_map().values() if piece.color == chess.BLACK)
+    
+    material_diff = white_material - black_material
+    if material_diff > 0:
+        context.append(f"Material: White is ahead by {material_diff} points")
+    elif material_diff < 0:
+        context.append(f"Material: Black is ahead by {abs(material_diff)} points")
+    else:
+        context.append("Material: Equal material")
+    
+    # King safety
+    white_king_square = board.king(chess.WHITE)
+    black_king_square = board.king(chess.BLACK)
+    
+    if white_king_square:
+        white_king_file = chess.square_file(white_king_square)
+        white_king_rank = chess.square_rank(white_king_square)
+        if white_king_rank <= 1 and (white_king_file <= 2 or white_king_file >= 5):
+            context.append("White king appears castled/safe")
+        elif white_king_rank >= 3:
+            context.append("White king is exposed in the center")
+    
+    if black_king_square:
+        black_king_file = chess.square_file(black_king_square)
+        black_king_rank = chess.square_rank(black_king_square)
+        if black_king_rank >= 6 and (black_king_file <= 2 or black_king_file >= 5):
+            context.append("Black king appears castled/safe")
+        elif black_king_rank <= 4:
+            context.append("Black king is exposed in the center")
+    
+    # Check status
+    if board.is_check():
+        context.append(f"{'White' if board.turn == chess.WHITE else 'Black'} king is in check")
+    
+    # Game phase indicator
+    total_pieces = len(board.piece_map())
+    if total_pieces > 24:
+        context.append("Position: Opening/Early middlegame")
+    elif total_pieces > 12:
+        context.append("Position: Middlegame")
+    else:
+        context.append("Position: Endgame")
+    
+    return "; ".join(context)
+
+def analysis_to_string(fen, side, analysis):
+    output = []
+    board = chess.Board(fen)
+    
+    # Show top 3 moves with their evaluations
+    for idx, item in enumerate(analysis[:3]):
+        eval_text = __mapWinProb(item['winprob'], side)
+        line_moves = generate_line(item['pv_moves'][:5], board)
+        
+        # Add move explanation
+        first_move = item['pv_moves'][0] if item['pv_moves'] else "No move"
+        move_obj = chess.Move.from_uci(first_move)
+        move_san = board.san(move_obj)
+        
+        output.append(f"Option {idx+1}: {move_san} - {eval_text}")
+        if line_moves:
+            output.append(f"   Continuation: {line_moves}")
+    
+    return "\n".join(output)
+
+
 def create_prompt_single_engine(fen, bestmoves, ponder):
     log.basicConfig(level=log.INFO)
     explainedFEN, side = fen_explainer(fen)
-    best_eval = []
-    for i in range(0, len(bestmoves)):
-        best_eval.append(__format_eval(bestmoves[i]))
-    print(bestmoves, best_eval)
-    winProbText = __mapWinProb(bestmoves[0]['winprob'], side)
+    board = chess.Board(fen)
     
-
-    prompt2 = f"""**Chess Position Analysis Request**
-
-{explainedFEN}
-
-Current situation: {winProbText}
-
-Please provide concise analysis (≤800 chars) covering:
-
-1. **Advantage Assessment** - Who stands better and the primary reason (material/structure/activity)
-2. **Best Move** - Why {bestmoves[0]['move']} ({best_eval[0]}) is strongest despite the evaluation
-3. **Alternative Plans** - Brief ideas behind: {[m['move'] for m in bestmoves[1:]]}
-
-
-Focus on concrete factors like:
-- Key weaknesses/squares
-- Piece activity/coordination
-- Pawn structure implications
-- Immediate tactical motifs"""
+    # Get position context
+    position_context = analyze_position_context(fen, board)
     
+    # Get the best move in readable format
+    best_move_uci = bestmoves[0]['pv_moves'][0] if bestmoves[0]['pv_moves'] else "No move"
+    best_move_san = board.san(chess.Move.from_uci(best_move_uci))
     
-
-    prompt = f'''
-        You are a chess engine analyst. This is the board state:{ explainedFEN }\n
-        { winProbText }
-        
-        Explain in simple language:
-
-        1. Who is better and why (positional, tactical, material).
-        2. Given the best move  {bestmoves[0]['move']}, which has the score {best_eval[0]}, explain why it is the best (remind that the )
-        3. The idea behind these other top moves {[m['move'] for m in bestmoves[1:]]}.
-
-        Respond concisely (try to stay inside 800 characters).'''
+    # Get evaluation
+    win_prob_text = __mapWinProb(bestmoves[0]['winprob'], side)
     
-    ## Questo causava confusione, riprovo diversamente
-    prompt_old = f'''My chess engine suggests the best move {bestmoves[0]['move']} (expressed in uci standard) with the score {best_eval[0]}.
-        {"" if ponder == None else f"The engine expects that this best move will be met by {ponder} on the next move."}
-        Please also consider, without speaking about them, that the engine consideres other 3 good moves, which are the following:
-        {[m['move'] for m in bestmoves[1:]]}
-        Can you please comment about the following things:
-        1) The current position of the game (for example who has a better chance, but don't limit yourself on this)
-        2) Your judgment about the bestmove (consider the evaluation of the engine)
+    # Show only the top move with continuation
+    top_move = bestmoves[0]
+    continuation = generate_line(top_move['pv_moves'][:4], board)
+    
+    # Create a concise, flowing prompt
+    prompt = f"""{explainedFEN}
 
-        Please be concise in your answer.
-        '''
+{position_context}
 
-    question3 = "3) Your analysis on what is going to happen\n"
-    question4 = "4) Your guess about the players strategy (for both sides)\n"
-    prompt_old = "I will explain the board situation:\n" + explainedFEN + prompt_old
-    log.info(prompt2)
-    return prompt2
+The engine recommends {best_move_san}, leading to the continuation {continuation}. The position evaluation shows that {win_prob_text.lower()}. 
+
+In 2-3 sentences, explain why {best_move_san} is the strongest choice and what this evaluation means for {side}'s position. Focus only on the concrete information provided."""
+    
+    return prompt
 
 def create_prompt_double_engine(fen, engine_analysis):    
     explainedFEN = fen_explainer(fen)
@@ -191,10 +248,15 @@ def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=10):
     
     messages = [
         {"role": "system", "content": f'''
-         You are a strong chess analysis assistant, powered by expert-level knowledge of strategy, tactics, and positional understanding.
-         When a user provides a move, respond with clear, insightful evaluations that include the best move, the reasoning behind it, and any critical ideas, threats, or positional plans.
-         Avoid unnecessary filler, but enrich your answers with concrete ideas such as tactical motifs, piece activity, material advantage, positional advantage, weaknesses, and long-term plans.
-         Use natural, chess-appropriate language. Stay strictly within the topic of chess.
+         You are a concise chess analysis assistant. For initial position analysis, provide brief, accurate insights based only on the given information.
+         Focus on the most important aspects: the recommended move and its purpose.
+         Keep responses short (2-3 sentences max). Avoid speculation or moves not mentioned in the analysis.
+         Use clear, natural chess language without unnecessary elaboration.
+         
+         For follow-up questions, refer back to the position and engine analysis provided in the conversation context.
+         Maintain the same brevity and focus on concrete information when answering follow-ups.
+         
+         If asked about moves that were not analyzed by the engine, respond that you don't have analysis for those moves and suggest the user try those moves on the board and re-run the analysis to get engine evaluation for them.
          '''}
     ] + chat_history + [
         {"role": "user", "content": prompt}
@@ -221,7 +283,17 @@ def stream_LLM(prompt, model, chat_history=None, max_history=10):
     chat_history = chat_history[-max_history:]
 
     messages = [
-        {"role": "system", "content": "You are a strong chess analysis assistant..."},
+        {"role": "system", "content": '''
+         You are a concise chess analysis assistant. For initial position analysis, provide brief, accurate insights based only on the given information.
+         Focus on the most important aspects: the recommended move and its purpose.
+         Keep responses short (2-3 sentences max). Avoid speculation or moves not mentioned in the analysis.
+         Use clear, natural chess language without unnecessary elaboration.
+         
+         For follow-up questions, refer back to the position and engine analysis provided in the conversation context.
+         Maintain the same brevity and focus on concrete information when answering follow-ups.
+         
+         If asked about moves that were not analyzed by the engine, respond that you don't have analysis for those moves and suggest the user try those moves on the board and re-run the analysis to get engine evaluation for them.
+         '''},
         *chat_history,
         {"role": "user", "content": prompt}
     ]

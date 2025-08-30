@@ -1,14 +1,14 @@
 // Chess evaluation engine constants
 export const EVALUATION_CONSTANTS = {
   // Default depth for engine evaluation
-  DEFAULT_DEPTH: 15,
+  DEFAULT_DEPTH: 20,
   
   // Minimum and maximum depth values
   MIN_DEPTH: 10,
   MAX_DEPTH: 50,
   
   // Default number of engine lines to show
-  DEFAULT_SHOW_LINES: 3,
+  DEFAULT_SHOW_LINES: 1,
   
   // Minimum and maximum lines to show
   MIN_SHOW_LINES: 1,
