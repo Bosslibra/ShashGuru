@@ -4,10 +4,33 @@ import { TheChessboard } from 'vue3-chessboard';
 import 'vue3-chessboard/style.css';
 import { Chess } from 'chess.js'
 import EvaluationBar from './EvaluationBar.vue'
+import EvaluationBarWDL from './EvaluationBarWDL.vue';
 import EvaluationSettings from './EvaluationSettings.vue'
 import { DEFAULT_DEPTH, DEFAULT_SHOW_LINES, DEFAULT_EVALUATION_ENABLED, DEFAULT_SHOW_BEST_MOVE } from '@/constants/evaluation.js'
 import { useChessStore } from '@/stores/useChessStore'; // TODO: Refactor to only use pinia store for PGN management
 import { storeToRefs } from 'pinia';
+
+
+
+
+
+
+
+
+
+
+const wdl = ref({ win: 70, draw: 20, loss: 10 });
+
+
+
+
+
+
+
+
+
+
+
 
 const chessStore = useChessStore();
 const currentPGN = storeToRefs(chessStore).currentPGN;
@@ -325,6 +348,11 @@ onUnmounted(() => {
             @move="handleMove" 
             style="max-height: 70vh; max-width: 50vmin"
             class=""
+          />
+        </div>
+        <div>
+          <EvaluationBarWDL
+            :wdl
           />
         </div>
       </div>

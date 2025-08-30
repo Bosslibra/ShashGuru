@@ -35,7 +35,8 @@ export class EvaluationService {
       const fenParts = fen.split(' ')
       const isWhiteToMove = fenParts[1] === 'w'
       
-      const server_url = import.meta.env.BASE_URL + 'backend'
+      // const server_url = import.meta.env.BASE_URL + 'backend'
+      const server_url = 'http://localhost:5000' // For local development
       const response = await axios.post(`${server_url}/evaluation`, {
         fen: fen,
         depth: depth,
