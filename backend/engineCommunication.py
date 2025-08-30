@@ -24,7 +24,6 @@ import threading
 import queue
 import time
 import atexit
-import select
 import sys
 from engineCache import get_cache
 
@@ -34,31 +33,6 @@ engine_name_HUMAN = 'alexander'
 engine_path_NNUE = f".\\executables\\{engine_name_NNUE}.exe" if os.name == 'nt' else f"./executables/{engine_name_NNUE}"
 engine_path_HUMAN = f".\\executables\\{engine_name_HUMAN}.exe" if os.name == 'nt' else f"./executables/{engine_name_HUMAN}"
 
-def non_blocking_readline(engine_stdout, timeout_seconds=0.1):
-    """
-    Non-blocking readline that works on Unix/Linux systems.
-    Returns None if no data is available within the timeout.
-    
-    Args:
-        engine_stdout: The stdout pipe from a subprocess
-        timeout_seconds: How long to wait for data (default 0.1 seconds)
-        
-    Returns:
-        str: The line read (stripped), or None if no data available
-    """
-    if sys.platform != 'win32':
-        # Unix/Linux systems - use select
-        ready, _, _ = select.select([engine_stdout], [], [], timeout_seconds)
-        if not ready:
-            return None
-    
-    try:
-        # On Windows or when data is ready on Unix
-        line = engine_stdout.readline()
-        return line.strip() if line else None
-    except Exception as e:
-        logging.error(f"Error in non_blocking_readline: {e}")
-        return None
 
 class EnginePool:
     """
@@ -93,11 +67,16 @@ class EnginePool:
                                      stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE,
                                      universal_newlines=True)
-            
+            os.set_blocking(engine.stdout.fileno(), False)
+
             # Initialize UCI protocol
             engine.stdin.write('uci\n')
             engine.stdin.flush()
 
+            engine.stdin.write('setoption name Threads value 64\n')
+            engine.stdin.flush()
+            engine.stdin.write('setoption name Hash value 64\n')
+            engine.stdin.flush()
 
             # Send isready and wait for readyok
             engine.stdin.write('isready\n')
@@ -144,14 +123,10 @@ class EnginePool:
             # Wait for readyok with timeout
             start_time = time.time()
             while time.time() - start_time < 5:
-                output = non_blocking_readline(engine.stdout, 0.1)
-                if output is None:
-                    continue  # No data available, check timeout and try again
+                output = engine.stdout.readline().strip()
                 if output == 'readyok':
                     self.available_engines.put(engine)
                     return
-                if not output:  # Empty line, continue waiting
-                    continue
                     
             # Timeout - engine is unresponsive
             logging.warning("Engine unresponsive, discarding")
@@ -202,7 +177,7 @@ def _initialize_nnue_pool():
     
     logging.info("Initializing NNUE engine pool at startup...")
     try:
-        _nnue_pool = EnginePool(engine_path_NNUE, pool_size=16)
+        _nnue_pool = EnginePool(engine_path_NNUE, pool_size=4)
         logging.info("NNUE engine pool initialized successfully at startup")
     except Exception as e:
         logging.error(f"Failed to initialize NNUE engine pool at startup: {e}")
@@ -216,12 +191,12 @@ def _get_engine_pool(engine_path):
         if engine_path == engine_path_NNUE:
             if _nnue_pool is None:
                 logging.warning("NNUE pool not initialized at startup, creating now...")
-                _nnue_pool = EnginePool(engine_path, pool_size=16)
+                _nnue_pool = EnginePool(engine_path, pool_size=4)
             return _nnue_pool
         elif engine_path == engine_path_HUMAN:
             if _human_pool is None:
                 logging.info("Lazy initializing HUMAN engine pool...")
-                _human_pool = EnginePool(engine_path, pool_size=16)
+                _human_pool = EnginePool(engine_path, pool_size=4)
             return _human_pool
         else:
             # For other engine paths, create a temporary pool
@@ -507,12 +482,8 @@ def _analyze_position_with_engine(engine, fen, depth, lines, timeout=10):
                 break
             
             # Use non-blocking readline
-            output = non_blocking_readline(engine.stdout, 0.1)
-            if output is None:
-                continue  # No data available, check timeout and try again
-            if not output:  # Empty line
-                continue
-            if output.startswith(f"info depth") and "multipv" in output:
+            output = engine.stdout.readline().strip()
+            if isinstance(output, str) and output.startswith(f"info depth") and "multipv" in output:
                 parts = output.split()
                 try:
                     mv_idx = parts.index("multipv") + 1
@@ -573,6 +544,8 @@ def _analyze_position_with_engine(engine, fen, depth, lines, timeout=10):
         return bestmoves, ponder
         
     except Exception as e:
+        engine.stdin.write(f'stop\n')
+        engine.stdin.flush()
         logging.error(f"Error analyzing position {fen}: {e}")
         return [], None
 
