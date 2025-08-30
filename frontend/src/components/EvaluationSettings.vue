@@ -76,7 +76,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import { DEFAULT_DEPTH, DEFAULT_EVALUATION_ENABLED, DEFAULT_SHOW_BEST_MOVE, DEFAULT_SHOW_LINES, MIN_DEPTH, MAX_DEPTH, MIN_SHOW_LINES, MAX_SHOW_LINES } from '@/constants/evaluation.js'
 
 const props = defineProps({
@@ -105,8 +105,12 @@ const localEnabled = ref(props.enabled)
 const localShowBestMove = ref(props.showBestMove)
 const localShowLines = ref(props.showLines)
 
+// Track original depth to compare on close
+const originalDepth = ref(props.depth)
+
 const updateDepth = () => {
-  emit('update:depth', parseInt(localDepth.value))
+  // Don't emit immediately, just update local value
+  // The depth will be emitted when component unmounts (modal closes)
 }
 
 const updateEnabled = () => {
@@ -125,14 +129,25 @@ const resetToDefaults = () => {
   localDepth.value = DEFAULT_DEPTH
   localShowBestMove.value = DEFAULT_SHOW_BEST_MOVE
   localShowLines.value = DEFAULT_SHOW_LINES
-  updateDepth()
+  // For reset, immediately emit all changes
+  emit('update:depth', parseInt(localDepth.value))
   updateShowBestMove()
   updateShowLines()
+  // Update original depth since we emitted it
+  originalDepth.value = localDepth.value
 }
+
+// Emit depth changes when component is unmounted (modal closes)
+onUnmounted(() => {
+  if (localDepth.value !== originalDepth.value) {
+    emit('update:depth', parseInt(localDepth.value))
+  }
+})
 
 // Watch for prop changes
 watch(() => props.depth, (newVal) => {
   localDepth.value = newVal
+  originalDepth.value = newVal
 })
 
 watch(() => props.enabled, (newVal) => {

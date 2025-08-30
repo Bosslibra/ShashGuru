@@ -24,6 +24,8 @@ import threading
 import queue
 import time
 import atexit
+import select
+import sys
 from engineCache import get_cache
 
 logging.basicConfig(level=logging.INFO)
@@ -31,6 +33,32 @@ engine_name_NNUE = 'shashchess'
 engine_name_HUMAN = 'alexander'
 engine_path_NNUE = f".\\executables\\{engine_name_NNUE}.exe" if os.name == 'nt' else f"./executables/{engine_name_NNUE}"
 engine_path_HUMAN = f".\\executables\\{engine_name_HUMAN}.exe" if os.name == 'nt' else f"./executables/{engine_name_HUMAN}"
+
+def non_blocking_readline(engine_stdout, timeout_seconds=0.1):
+    """
+    Non-blocking readline that works on Unix/Linux systems.
+    Returns None if no data is available within the timeout.
+    
+    Args:
+        engine_stdout: The stdout pipe from a subprocess
+        timeout_seconds: How long to wait for data (default 0.1 seconds)
+        
+    Returns:
+        str: The line read (stripped), or None if no data available
+    """
+    if sys.platform != 'win32':
+        # Unix/Linux systems - use select
+        ready, _, _ = select.select([engine_stdout], [], [], timeout_seconds)
+        if not ready:
+            return None
+    
+    try:
+        # On Windows or when data is ready on Unix
+        line = engine_stdout.readline()
+        return line.strip() if line else None
+    except Exception as e:
+        logging.error(f"Error in non_blocking_readline: {e}")
+        return None
 
 class EnginePool:
     """
@@ -116,10 +144,14 @@ class EnginePool:
             # Wait for readyok with timeout
             start_time = time.time()
             while time.time() - start_time < 5:
-                output = engine.stdout.readline().strip()
+                output = non_blocking_readline(engine.stdout, 0.1)
+                if output is None:
+                    continue  # No data available, check timeout and try again
                 if output == 'readyok':
                     self.available_engines.put(engine)
                     return
+                if not output:  # Empty line, continue waiting
+                    continue
                     
             # Timeout - engine is unresponsive
             logging.warning("Engine unresponsive, discarding")
@@ -440,7 +472,7 @@ def _analyze_position_with_cache_and_engine(cache, engine, fen, depth, lines):
     
     return result
 
-def _analyze_position_with_engine(engine, fen, depth, lines):
+def _analyze_position_with_engine(engine, fen, depth, lines, timeout=10):
     """
     Analyze a specific position with an already initialized engine.
     
@@ -449,6 +481,7 @@ def _analyze_position_with_engine(engine, fen, depth, lines):
         fen: Position to analyze
         depth: Analysis depth
         lines: Number of lines (MultiPV)
+        timeout: analysis timeout (in seconds)
         
     Returns:
         Tuple of (bestmoves, ponder)
@@ -460,12 +493,26 @@ def _analyze_position_with_engine(engine, fen, depth, lines):
         engine.stdin.write(f'go depth {depth}\n')
         engine.stdin.flush()
 
-        bestmoves = []
+        bestmoves = lines * [None]
         ponder = None
-        
+
+        start_time = time.perf_counter()
+
         while True:
-            output = engine.stdout.readline().strip()
-            if output.startswith(f"info depth {depth}") and "multipv" in output:
+            # Check for timeout first
+            if time.perf_counter() - start_time > timeout:
+                logging.warning("Engine analysis timeout")
+                engine.stdin.write(f'stop\n')
+                engine.stdin.flush()
+                break
+            
+            # Use non-blocking readline
+            output = non_blocking_readline(engine.stdout, 0.1)
+            if output is None:
+                continue  # No data available, check timeout and try again
+            if not output:  # Empty line
+                continue
+            if output.startswith(f"info depth") and "multipv" in output:
                 parts = output.split()
                 try:
                     mv_idx = parts.index("multipv") + 1
@@ -502,7 +549,7 @@ def _analyze_position_with_engine(engine, fen, depth, lines):
                         l = int(parts[wdl_idx + 2])
                         winprob = (w + (d/2))/10
 
-                    bestmoves.insert(int(parts[mv_idx]) - 1, {
+                    bestmoves[int(parts[mv_idx]) - 1] = {
                         'move': first_move,
                         'pv_moves': pv_moves,
                         'score': score,
@@ -511,7 +558,7 @@ def _analyze_position_with_engine(engine, fen, depth, lines):
                         'd': d,
                         'l': l,
                         'winprob': winprob,
-                    })
+                    }
                     
                 except Exception as e:
                     logging.error(f"Parse error in position analysis: {e}")
