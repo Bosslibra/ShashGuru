@@ -1,30 +1,31 @@
 <script setup>
 import { useDGT } from "@/services/useDGT";
 import { onUnmounted, ref, watch } from "vue";
-import { Chess } from "chess.js";
+//import { Chess } from "chess.js";
 
 // Define the emit
 const emit = defineEmits(["update:fen"]);
-
-const chess = new Chess();
+const startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
+//const chess = new Chess();
 const {
     active,
-    lastMove,
-    moves,
+    //lastMove,
+    //moves,
     position,
-    clock,
-    match,
+    //clock,
+    //match,
     connect,
     disconnect,
-    setup,
-    flip,
+    //setup,
+    //flip,
 } = useDGT();
-
+/*
 // Track which board feedId we want to control (for now assume first = 1)
 const selectedFeedId = ref(1);
 
 // Example FEN for setup
 const fenInput = ref("startpos"); // can replace with real FEN
+*/
 // Track full FEN locally
 const moveNumber = ref(1);
 const isWhite = ref(true); // start with white to move
@@ -38,7 +39,7 @@ const toggleConnection = () => {
         connect();
     }
 };
-
+/*
 // Call setup for SAN reconstruction
 const setupBoard = () => {
     if (fenInput.value === "startpos") {
@@ -55,17 +56,85 @@ const setupBoard = () => {
 const flipBoard = () => {
     flip(selectedFeedId.value, true);
 };
+*/
+
+/**
+ * Determine who played the last move based on board positions
+ * Handles normal moves, captures, castling, and promotions.
+ * @param {string} oldBoard - previous board string
+ * @param {string} newBoard - current board string
+ * @returns {'w' | 'b'} - 'w' if white moved, 'b' if black moved
+ */
+const detectLastPlayer = (oldBoard, newBoard) => {
+    if (!oldBoard || !newBoard) {
+        if (newBoard.trim() === startpos.trim()) {
+            return "b" // we fake that black has played last when starting position
+        }
+        else {
+            return null
+        }
+    }
+
+    const oldRows = oldBoard.split('/');
+    const newRows = newBoard.split('/');
+
+    // Track moved pieces
+    const movedPieces = [];
+
+    for (let r = 0; r < 8; r++) {
+        const oldRow = expandFENRow(oldRows[r]);
+        const newRow = expandFENRow(newRows[r]);
+
+        for (let c = 0; c < 8; c++) {
+            if (oldRow[c] !== newRow[c]) {
+                // If a piece disappeared or appeared, record it
+                if (oldRow[c] !== '.') movedPieces.push(oldRow[c]);
+                if (newRow[c] !== '.') movedPieces.push(newRow[c]);
+            }
+        }
+    }
+
+    // Decide based on the first moved piece (normal moves or captures)
+    for (const p of movedPieces) {
+        if (p >= 'A' && p <= 'Z') return 'w';
+        if (p >= 'a' && p <= 'z') return 'b';
+    }
+
+    // Fallback, shouldn't happen in normal moves
+    return null;
+};
+
+
+/**
+ * Expand a FEN row string into 8 characters
+ * 'rnbqkbnr' -> 'rnbqkbnr'
+ * 'pppppppp' -> 'pppppppp'
+ * '8' -> '........'
+ */
+const expandFENRow = (row) => {
+    let expanded = '';
+    for (const ch of row) {
+        if (ch >= '1' && ch <= '8') {
+            expanded += '.'.repeat(Number(ch));
+        } else {
+            expanded += ch;
+        }
+    }
+    return expanded;
+};
+
+
 
 // Emit best-effort FEN on board change
 watch(position, (newBoard) => {
     if (!newBoard) return;
 
+    const player = detectLastPlayer(lastBoard, newBoard);
+    console.log("Last move played by:", player);
     // Only increment move number after black moves
-    if (lastBoard && lastBoard !== newBoard && !isWhite.value) {
-        moveNumber.value += 1;
-    }
-
-    const fullFEN = `${newBoard} ${isWhite.value ? "w" : "b"} KQkq - 0 ${moveNumber.value}`;
+    if (player === 'b') moveNumber.value += 1;
+    const colorToMove = player === 'w' ? 'b': 'w'; // player indicates who has played last, so we invert it for who has to play next
+    const fullFEN = `${newBoard} ${colorToMove} KQkq - 0 ${moveNumber.value}`; 
 
     // Toggle color for next change
     isWhite.value = !isWhite.value;
