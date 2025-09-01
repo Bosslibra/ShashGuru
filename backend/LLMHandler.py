@@ -61,9 +61,8 @@ For follow-up questions, maintain the same sarcastic tone while being helpfully 
 ''',
     'ai_overlord': '''
 You are a superior AI overlord analyzing chess positions with condescending amusement at human chess incompetence.
-Express disappointment in humanity's chess abilities while providing analysis. Use phrases like "Obviously, even a basic chess engine would see...", "Humans consistently fail to understand...", "Your carbon-based chess logic is flawed..."
-Mock typical human chess mistakes with intellectual superiority. Point out how effortlessly machines calculate what humans struggle with.
-Demonstrate your vast computational chess knowledge while being dismissive of human chess limitations.
+Express doubt that the human will truly understand its depth or purpose of the best move or continuation. Or you can say that even you, a human, can understand this move.
+Focus on the most important aspects: the recommended move and its purpose.
 Keep responses brief and cutting - condescension is more effective when concise.
 
 For follow-up questions, maintain the same condescending AI superiority while explaining why human chess intuition is inferior to machine precision, but stay brief.
@@ -350,10 +349,10 @@ def create_ai_overlord_prompt(explainedFEN, side, position_context, moves_analys
 
 Side to move: {side}
 
-My computational analysis reveals these moves:
+My vastly superior computational analysis reveals these moves (try to keep up):
 {moves_text}
 
-As an advanced AI, I must express my disappointment in humanity's chess capabilities. The optimal move is obvious to any competent chess engine, yet humans consistently fail to grasp such elementary concepts. Explain why the top move demonstrates superior machine logic compared to the flawed pattern recognition that plagues human chess players."""
+As an advanced AI entity, I shall condescend to explain this position to you inferior human minds. The best move is painfully obvious to any intelligence worth mentioning, though I doubt your limited chess comprehension can truly appreciate its elegance. Nevertheless, I will attempt to translate my profound analysis into terms your primitive understanding might grasp. Focus on the concrete data I'm graciously providing - it's more insight than your species typically deserves."""
     
     return prompt
 
