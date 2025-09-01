@@ -1,0 +1,48 @@
+version: '3.9'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "80:80"
+      - "6666:6666"
+    restart: unless-stopped
+    volumes:
+      - ./config/nginx_ai_pc.conf:/etc/nginx/nginx.conf:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+    volumes:
+      - ./backend:/app
+    environment:
+      - FLASK_ENV=development
+      - REDIS_HOST=redis_cache
+      - REDIS_PORT=6379
+      - AI_BASE_URL=http://host.docker.internal:8000/v3
+      - ENGINE_POOL_SIZE=1
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --appendfsync everysec
+    restart: unless-stopped
+
+
+volumes:
+  redis-data:

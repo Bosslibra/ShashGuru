@@ -25,6 +25,7 @@ from transformers.utils import logging
 # Import for prompt creation
 from fenManipulation import fen_explainer
 import chess
+import os
 
 quantization = True
 
@@ -58,8 +59,8 @@ def load_LLM_model(modelNumber=1):
     #elif modelNumber == 3: 
         ## non credo vada
         #model = AutoModel.from_pretrained("OutFlankShu/MATE/both/checkpoint-1000")
-
-    model = OpenAI(base_url="http://frontend:6666/v1", api_key="unused")
+    base_url = os.environ.get("AI_BASE_URL", "http://frontend:6666/v1")
+    model = OpenAI(base_url=base_url, api_key="unused")
     return None, model
 
 def __format_eval(entry):
