@@ -29,10 +29,35 @@ const messages = ref([]);
 const loading = ref(false)
 const toAnalyse = ref(true);
 const justCopiedMsg = ref(false);
+const selectedStyle = ref('default');
+const analysisStyles = ref([
+    { value: 'default', label: 'Commentator' } // Always present as fallback
+]);
 
 const isClipboardCopyingAvailable = ref(true)
 
 // Methods
+
+async function fetchAnalysisStyles() {
+    console.log("Fetching analysis styles from server...");
+    try {
+        const response = await fetch(server_url + '/analysis/styles');
+        if (response.ok) {
+            const data = await response.json();
+            if (data.styles && Array.isArray(data.styles)) {
+                analysisStyles.value = data.styles;
+                // Ensure "Commentator" (default) is always present
+                const hasDefault = analysisStyles.value.some(style => style.value === 'default');
+                if (!hasDefault) {
+                    analysisStyles.value.unshift({ value: 'default', label: 'Commentator' });
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching analysis styles:', error);
+        // Keep fallback styles if API fails
+    }
+}
 
 async function sendMessageSTREAMED() {
     if (userInput.value.trim() === '') return;
@@ -45,7 +70,7 @@ async function sendMessageSTREAMED() {
     scrollToBottom();
 
     try {
-        const response = await fetch(server_url + '/response', {
+        const response = await fetch(server_url + `/response?style=${selectedStyle.value}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -123,6 +148,7 @@ async function startAnalysisSTREAMED() {
                 body: JSON.stringify({ 
                     fen: fenToAnalyse,
                     depth: props.depth,
+                    style: selectedStyle.value
                 })
             });
 
@@ -214,6 +240,12 @@ watch(() => props.fen, () => {
 watch(() => messages.value.length, () => {
     scrollToBottom();
 });
+// Reset to analyze state when style changes
+watch(() => selectedStyle.value, () => {
+    if (messages.value.length > 0) {
+        toAnalyse.value = true;
+    }
+});
 function renderedMarkdown(content) {
     return md.render(content)
 }
@@ -259,8 +291,8 @@ async function regenerateMessage(index) {
 }
 
 onMounted(() =>{
+    fetchAnalysisStyles()
     isClipboardCopyingAvailable.value = navigator.clipboard.writeText ? true : false
-    
 })
 
 </script>
@@ -269,7 +301,7 @@ onMounted(() =>{
 <template>
     <div class="container-fill d-flex flex-column  overflow-auto p-3 me-0  rounded-4 w-100 h-100">
         <!-- Chat Messages -->
-        <div id="messages" class=" flex-grow-1 h-100" style="scroll-behavior: smooth;">
+        <div id="messages" class="flex-grow-1 h-100 overflow-auto" style="scroll-behavior: smooth;">
 
             <div v-for="(message, i) in messages" :key="i">
                 <div v-if="message.role === 'user'" class="d-flex mb-1 justify-content-end">
@@ -313,14 +345,29 @@ onMounted(() =>{
         </div>
 
         <div class="flex-shrink-0">
-            <div v-if="toAnalyse" class="flex-item d-flex justify-content-center">
-                <button type="button"
-                    class="btn btn-sm m-1 fs-4 text-black rounded rounded-4 custom-bg-primary px-5 py-3 fw-bold"
-                    @click="startAnalysisSTREAMED">
-                    Analyze
-                </button>
-                <!-- Input Field -->
-
+            <div v-if="toAnalyse" class="flex-item">
+                <!-- Style Selector and Analyze Button - Horizontally Spaced -->
+                <div class="d-flex justify-content-center align-items-center gap-3 mb-3">
+                    <div class="d-flex flex-column align-items-center">
+                        <label for="style-selector" class="style-label mb-1">Analysis Style</label>
+                        <select id="style-selector" 
+                                v-model="selectedStyle" 
+                                class="form-select style-selector"
+                                aria-label="Analysis Style">
+                            <option v-for="style in analysisStyles" 
+                                    :key="style.value" 
+                                    :value="style.value">
+                                {{ style.label }}
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <button type="button"
+                        class="btn btn-sm fs-4 text-black rounded rounded-4 custom-bg-primary px-5 py-3 fw-bold"
+                        @click="startAnalysisSTREAMED">
+                        Analyze
+                    </button>
+                </div>
             </div>
             <input v-model="userInput" v-else @keyup.enter="sendMessageSTREAMED" id="input"
                 class="flex-item border rounded px-3 py-2 mt-2 w-100 text-white custom-box" placeholder="Ask Anything!"
@@ -377,8 +424,10 @@ h6 {
 }
 
 #messages {
-
     overflow: auto;
+    max-height: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: #888 transparent;
 }
 
 /* width */
@@ -409,5 +458,36 @@ h6 {
 .disclaimer-text small {
     font-size: 0.75rem;
     opacity: 0.8;
+}
+
+.style-selector {
+    background-color: #2e2e2e;
+    border: 2px solid #aaa23a;
+    color: #fff;
+    border-radius: 8px;
+    padding: 8px 12px;
+    min-width: 150px;
+    max-width: 200px;
+    flex-shrink: 0;
+}
+
+.style-selector:focus {
+    background-color: #2e2e2e;
+    border-color: #aaa23a;
+    color: #fff;
+    box-shadow: 0 0 0 0.2rem rgba(170, 162, 58, 0.25);
+}
+
+.style-selector option {
+    background-color: #2e2e2e;
+    color: #fff;
+}
+
+.style-label {
+    color: #aaa23a;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    margin: 0;
 }
 </style>

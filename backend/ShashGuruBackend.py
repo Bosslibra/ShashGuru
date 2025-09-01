@@ -33,9 +33,11 @@ def analysis():
     fen = request.json.get('fen')  
     print("Received analysis request for:", fen)
     depth = request.json.get('depth', 20)
+    style = request.json.get('style', 'default')
 
-    bestmoves, ponder = engineCommunication.call_engine(fen, depth, lines=1)
-    prompt = LLMHandler.create_prompt_single_engine(fen, bestmoves, ponder)
+    # Request 3 lines for multiple move analysis
+    bestmoves, ponder = engineCommunication.call_engine(fen, depth, lines=3)
+    prompt = LLMHandler.create_prompt_single_engine(fen, bestmoves, ponder, style)
 
     ############################
     #  Questo è per due engine #
@@ -46,7 +48,7 @@ def analysis():
     def generate():
         yield json.dumps({"prompt": prompt}) + "\n[PROMPT_END]\n" # sends single chunk with prompt, to save it as context for responses
         yield "[START_STREAM]\n"  # optional: delimiter for stream start
-        for token in LLMHandler.stream_LLM(prompt, model):  # <-- stream here
+        for token in LLMHandler.stream_LLM(prompt, model, style=style):  # <-- stream here
             yield token
         yield "\n[END_STREAM]"  # optional: delimiter for stream end 
     
@@ -59,11 +61,12 @@ def response():
     if chat_history is None:
         chat_history = [] 
     new_question = chat_history[-1].get("content")
+    style = request.args.get('style', 'default')  # Get style from query parameters
     print('Received question:' , new_question)
 
     def generate():
         yield "[START_STREAM]\n"
-        for token in LLMHandler.stream_LLM(new_question, model, chat_history=chat_history[:-1]):
+        for token in LLMHandler.stream_LLM(new_question, model, chat_history=chat_history[:-1], style=style):
             yield token
         yield "\n[END_STREAM]"
 
@@ -234,6 +237,19 @@ def pool_stats():
         return jsonify(stats)
     except Exception as e:
         print(f"Error getting pool stats: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/analysis/styles", methods=['GET'])
+def analysis_styles():
+    """
+    Returns available analysis styles.
+    """
+    try:
+        styles = LLMHandler.get_analysis_styles()
+        return jsonify({"styles": styles})
+    except Exception as e:
+        print(f"Error getting analysis styles: {e}")
         return jsonify({"error": str(e)}), 500
 
 

@@ -660,9 +660,9 @@ watch(selectedMoveIndex, async () => {
         </div>
 
         <!-- TAB CONTENT -->
-        <div class="tab-content flex-fill d-flex flex-column">
+        <div class="tab-content flex-fill d-flex flex-column overflow-hidden">
           <!-- MOVES TAB -->
-          <div class="tab-pane flex-fill d-flex flex-column">
+          <div class="tab-pane flex-fill d-flex flex-column overflow-hidden">
             <!-- PLAYER INFO -->
             <div v-if="hasPlayerInfo" id="playerInfo"
               class="d-flex align-items-center justify-content-between p-3 text-light"
@@ -688,7 +688,7 @@ watch(selectedMoveIndex, async () => {
             
             <!-- MOVES -->
             <div v-if="activeTab === 'moves'" class="flex-fill">
-              <div id="moveHeader" class="d-flex justify-content-center align-items-center py-1 ">
+              <div id="moveHeader" class="d-flex justify-content-center align-items-center py-1 flex-shrink-0">
                 <div>
                   <button class="btn btn-sm text-white material-icons" :disabled="!currentNode || !currentNode.parent"
                     @click="backStart">first_page</button>
@@ -724,8 +724,8 @@ watch(selectedMoveIndex, async () => {
                   </button>
                 </div>
               </div>
-              <div class="pe-2">
-                <div id="moves" class="px-3 pt-3 pb-2">
+              <div class="flex-fill overflow-auto">
+                <div id="moves" class="px-3 pt-3 pb-2 h-100">
                   <!-- Engine Lines Display -->
                   <EngineLines 
                     v-if="(engineEvaluation && engineEvaluation.lines && engineEvaluation.lines.length > 0) || isEngineEvaluationLoading"
@@ -897,11 +897,13 @@ watch(selectedMoveIndex, async () => {
 }
 
 #moves {
-  max-height: calc(80vh - 200px);
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   scroll-behavior: smooth;
   border-bottom: 1px solid #ffffff1e;
   line-height: 1.6;
+  scrollbar-width: thin;
+  scrollbar-color: #888 transparent;
 }
 
 .move-tree {
