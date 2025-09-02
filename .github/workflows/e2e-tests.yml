@@ -93,7 +93,7 @@ jobs:
 
     - name: Check website response time
       run: |
-        response_time=$(curl -s -o /dev/null -w "%{time_total}" http://shashguru.disi.unibo.it/)
+        response_time=$(curl -s -o /dev/null -w "%{time_total}" https://shashguru.disi.unibo.it/)
         echo "Website response time: ${response_time}s"
         
         # Fail if response time is greater than 10 seconds
