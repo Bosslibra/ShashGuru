@@ -83,7 +83,7 @@ jobs:
     steps:
     - name: Check website availability
       run: |
-        response=$(curl -s -o /dev/null -w "%{http_code}" http://shashguru.disi.unibo.it/)
+        response=$(curl -s -o /dev/null -w "%{http_code}" https://shashguru.disi.unibo.it/)
         if [ $response -eq 200 ]; then
           echo "✅ Website is accessible"
         else
