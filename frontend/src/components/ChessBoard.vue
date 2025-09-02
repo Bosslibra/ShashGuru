@@ -116,11 +116,13 @@ function handleBoardCreated(api) {
 
 function drawBestMovesArrows() {
   if (showBestMoveArrow.value && engineEvaluation.value?.bestMove) {
-    boardAPI.value?.drawMove(
-      engineEvaluation.value.bestMove.slice(0, 2),
-      engineEvaluation.value.bestMove.slice(2, 4),
-      'paleBlue',
-    );
+    if (engineEvaluation.value.fen === fen.value) {
+      boardAPI.value?.drawMove(
+        engineEvaluation.value.bestMove.slice(0, 2),
+        engineEvaluation.value.bestMove.slice(2, 4),
+        'paleBlue',
+      );
+    }
   }
 }
 

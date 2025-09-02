@@ -139,13 +139,13 @@ function addMove(move) {
           const newNode = currentNode.value.addChild(chessMove.san, chess.fen());
           currentNode.value = newNode;
           // Fetch evaluation for the new move
-          fetchEvaluationForNode(newNode);
+          // fetchEvaluationForNode(newNode);
         } else {
           // Add as new variation
           const newNode = currentNode.value.addVariation(chessMove.san, chess.fen());
           currentNode.value = newNode;
           // Fetch evaluation for the new move
-          fetchEvaluationForNode(newNode);
+          // fetchEvaluationForNode(newNode);
         }
       }
       selectedPath.value = currentNode.value.getPath();
