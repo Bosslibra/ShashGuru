@@ -7,11 +7,14 @@ services:
       dockerfile: frontend/Dockerfile
     ports:
       - "80:80"
+      - "443:443"
       - "6666:6666"
     restart: unless-stopped
     volumes:
       - ./config/nginx_vllm.conf:/etc/nginx/nginx.conf:ro
       - ./logs/nginx:/var/log/nginx
+      - ./certbot/www:/var/www/certbot/:ro
+      - ./certbot/conf/:/etc/nginx/ssl/:ro
     depends_on:
       - model_server_0
       - model_server_1
@@ -169,6 +172,12 @@ services:
       - redis-data:/data
     command: redis-server --appendonly yes --appendfsync everysec
     restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - ./certbot/www/:/var/www/certbot/:rw
+      - ./certbot/conf/:/etc/letsencrypt/:rw
 
 
 volumes:
