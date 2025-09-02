@@ -160,7 +160,6 @@ async function startAnalysisSTREAMED() {
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let fullMessageANALYSIS = "";
-            let streamStarted = false;
             let promptReceived = false;
             let systemPrompt = "";
 
@@ -200,15 +199,11 @@ async function startAnalysisSTREAMED() {
                 }
 
                 if (chunk.includes("[START_STREAM]")) {
-                    streamStarted = true;
-                    continue;
+                    chunk = chunk.replace("[START_STREAM]", "");
                 }
 
-                if (!streamStarted) continue;
-
                 if (chunk.includes("[END_STREAM]")) {
-                    fullMessageANALYSIS += chunk.replace("[END_STREAM]", "");
-                    break;
+                    chunk = chunk.replace("[END_STREAM]", "");
                 }
 
                 fullMessageANALYSIS += chunk;

@@ -12,15 +12,11 @@
 #GNU General Public License for more details.
 #
 #You should have received a copy of the GNU General Public License
-#along with this program.  If not, see <https://www.gnu.org/licenses/>.vb
+#along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import transformers
 from openai import OpenAI
 import logging as log
-
-# Imports that remove logging
 import warnings
-from transformers.utils import logging
 
 # Import for prompt creation
 from fenManipulation import fen_explainer
@@ -92,23 +88,11 @@ def get_analysis_styles():
     ]
 
 
-def load_LLM_model(modelNumber=1):
+def load_LLM_model():
     
     # Removing logging
     #transformers.utils.logging.disable_progress_bar()
-    logging.set_verbosity(transformers.logging.FATAL)
     warnings.filterwarnings("ignore")
-    model_path = ""
-    #__ Llama 3.1-8B ___#
-    if modelNumber == 1: 
-            model_path = "meta-llama/Llama-3.1-8B-Instruct"
-    #__ Llama 3.2-1B ___#
-    if modelNumber == 2:
-            model_path = "meta-llama/Llama-3.2-1B"
-    #__ Llama 3.1-8B, finetuned with MATE database ___#
-    #elif modelNumber == 3: 
-        ## non credo vada
-        #model = AutoModel.from_pretrained("OutFlankShu/MATE/both/checkpoint-1000")
     base_url = os.environ.get("AI_BASE_URL", "http://frontend:6666/v1")
     model = OpenAI(base_url=base_url, api_key="unused")
     return None, model

@@ -24,8 +24,39 @@ import LLMHandler
 import engineCommunication
 from engineCache import get_cache
 
-app = Flask(__name__)
-CORS(app)
+# Global variables for model and tokenizer
+tokenizer = None
+model = None
+
+def load_models():
+    """Load the LLM model and tokenizer - called once at startup"""
+    global tokenizer, model
+    if tokenizer is None or model is None:
+        logging.info("Loading LLM model...")
+        tokenizer, model = LLMHandler.load_LLM_model()
+        logging.info("Model loaded successfully.")
+
+def create_app():
+    """Application factory function"""
+    app = Flask(__name__)
+    CORS(app)
+    
+    # Load models when creating the app
+    load_models()
+    
+    return app
+
+app = create_app()
+
+
+@app.route("/health", methods=['GET'])
+def health_check():
+    """Health check endpoint for load balancers and monitoring"""
+    return jsonify({
+        "status": "healthy",
+        "model_loaded": model is not None,
+        "tokenizer_loaded": tokenizer is not None
+    }), 200
 
 
 @app.route("/analysis", methods=['GET', 'POST'])
@@ -261,25 +292,9 @@ def analysis_styles():
 
 
 if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(description="Run ShashGuru Backend with optional flags.")
-    parser.add_argument("--M", action="store_true", help="Use MATE model")
-    parser.add_argument("--S", action="store_true", help="Use Llama3.2-1B model")
-    parser.add_argument("--L", action="store_true", help="Use Llama3.1-8B model")
-    args = parser.parse_args()
-
-    modelNumber = 1
-    if args.L:
-        modelNumber = 1
-    elif args.S:
-        modelNumber = 2
-    elif args.M:
-        modelNumber = 3
-    else: 
-        model_number = 1
-
-    tokenizer, model = LLMHandler.load_LLM_model(modelNumber)
-    logging.info("Loaded model.")
-    #THIS IS NECESSARY, DO NOT REMOVE
+    # This will only run when called directly (not with gunicorn)
+    logging.basicConfig(level=logging.INFO)
+    load_models()
+    logging.info("Starting development server...")
     app.run(host="0.0.0.0", port=5000, debug=True)
     
