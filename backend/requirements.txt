@@ -44,6 +44,7 @@ packaging
 pathspec
 pillow
 platformdirs
+prometheus_client
 proxycrawl
 psutil
 pycparser

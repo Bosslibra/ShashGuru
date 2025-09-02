@@ -15,18 +15,90 @@
 #along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from flask import Flask, request, Response, stream_with_context, jsonify, json
+from prometheus_client import Summary, Counter, Gauge, generate_latest, CONTENT_TYPE_LATEST
 from flask_cors import CORS
 import argparse
 import logging 
+import time
+from functools import wraps
 
 
 import LLMHandler
 import engineCommunication
 from engineCache import get_cache
 
+# Prometheus metrics
+REQUEST_COUNT = Counter(
+    'shashguru_requests_total',
+    'Total number of requests by endpoint',
+    ['endpoint', 'method', 'status']
+)
+
+REQUEST_DURATION = Summary(
+    'shashguru_request_duration_seconds',
+    'Request duration in seconds by endpoint',
+    ['endpoint', 'method']
+)
+
+ACTIVE_REQUESTS = Gauge(
+    'shashguru_active_requests',
+    'Number of active requests by endpoint',
+    ['endpoint']
+)
+
+ERROR_COUNT = Counter(
+    'shashguru_errors_total',
+    'Total number of errors by endpoint',
+    ['endpoint', 'error_type']
+)
+
 # Global variables for model and tokenizer
 tokenizer = None
 model = None
+
+def track_metrics(endpoint_name):
+    """Decorator to track metrics for endpoints"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            method = request.method
+            start_time = time.time()
+            
+            # Increment active requests
+            ACTIVE_REQUESTS.labels(endpoint=endpoint_name).inc()
+            
+            try:
+                # Execute the function
+                response = func(*args, **kwargs)
+                
+                # Determine status code
+                if hasattr(response, 'status_code'):
+                    status = str(response.status_code)
+                elif isinstance(response, tuple) and len(response) > 1:
+                    status = str(response[1])
+                else:
+                    status = '200'
+                
+                # Record successful request
+                REQUEST_COUNT.labels(endpoint=endpoint_name, method=method, status=status).inc()
+                
+                return response
+                
+            except Exception as e:
+                # Record error
+                error_type = type(e).__name__
+                REQUEST_COUNT.labels(endpoint=endpoint_name, method=method, status='500').inc()
+                ERROR_COUNT.labels(endpoint=endpoint_name, error_type=error_type).inc()
+                raise
+                
+            finally:
+                # Record duration and decrement active requests
+                duration = time.time() - start_time
+                REQUEST_DURATION.labels(endpoint=endpoint_name, method=method).observe(duration)
+                ACTIVE_REQUESTS.labels(endpoint=endpoint_name).dec()
+        
+        return wrapper
+    return decorator
 
 def load_models():
     """Load the LLM model and tokenizer - called once at startup"""
@@ -59,7 +131,14 @@ def health_check():
     }), 200
 
 
+@app.route("/metrics", methods=['GET'])
+def metrics():
+    """Prometheus metrics endpoint"""
+    return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
+
+
 @app.route("/analysis", methods=['GET', 'POST'])
+@track_metrics('analysis')
 def analysis():
     fen = request.json.get('fen')  
     print("Received analysis request for:", fen)
@@ -87,6 +166,7 @@ def analysis():
 
 
 @app.route("/response", methods=['GET','POST'])
+@track_metrics('response')
 def response():
     chat_history = request.get_json()
     if chat_history is None:
@@ -105,6 +185,7 @@ def response():
 
 
 @app.route("/evaluation", methods=['GET', 'POST'])
+@track_metrics('evaluation')
 def evaluation():
     """
     Returns engine evaluation for a given FEN position.
@@ -185,6 +266,7 @@ def clear_cache():
 
 
 @app.route("/pgn-analysis", methods=['POST'])
+@track_metrics('pgn_analysis')
 def pgn_analysis():
     """
     Analyzes a complete PGN game using a dedicated engine instance.
