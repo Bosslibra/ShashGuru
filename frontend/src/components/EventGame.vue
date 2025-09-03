@@ -74,7 +74,7 @@ const fen = ref('')
 const boardConfig = reactive({
     fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // Starting FEN
     viewOnly: true, // Make the board read-only
-    orientation: 'black', // Set initial orientation to black
+    orientation: 'white', // Set initial orientation to black
 });
 
 function navigateToAnalysis() {
@@ -169,7 +169,7 @@ onMounted(() => {
     font-weight: bold;
     font-size: 2rem;
     z-index: 100;
-    cursor: not-allowed
+    cursor: pointer
 }
 
 .text-victory {

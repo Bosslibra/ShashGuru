@@ -870,9 +870,13 @@ watch(selectedMoveIndex, async () => {
   border: 1px solid #444;
   border-top: 0px solid transparent;
   margin-bottom: 12px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 60vh;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   padding: 8px 0;
+  scrollbar-width: thin;
+  scrollbar-color: #888 transparent;
 }
 
 .right-panel {

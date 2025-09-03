@@ -1,11 +1,23 @@
 <template>
     <div v-if="shouldRender" class="card-like event-section mx-5 mb-2 pb-3 position-relative">
-        <div class="d-flex flex-row align-items-start p-3 cursor-pointer event-header" @click="toggleVisibility">
-            <div class="fs-4 flex-shrink-0">
+        <div class="d-flex flex-row align-items-center justify-content-between p-3 event-header">
+            <div class="fs-4 flex-shrink-0 cursor-pointer" @click="toggleVisibility">
                 <span>{{ title }}</span>
                 <span class="material-icons ms-1">
                     {{ isVisible ? 'keyboard_arrow_down' : 'chevron_right' }}
                 </span>
+            </div>
+            <div class="d-flex gap-2">
+                <!-- Refresh Button -->
+                <button 
+                    class="btn btn-outline-secondary btn-sm refresh-btn" 
+                    @click="handleRefresh"
+                    :disabled="isRefreshing"
+                    title="Refresh PGN data"
+                >
+                    <span v-if="!isRefreshing" class="material-icons">refresh</span>
+                    <span v-else class="spinner-border spinner-border-sm"></span>
+                </button>
             </div>
         </div>
 
@@ -43,11 +55,13 @@ const props = defineProps({
     title: { type: String, required: true },
     pgnList: { type: Array, default: () => [] },
     shouldRender: { type: Boolean, default: true },
-    initiallyOpen: { type: Boolean, default: false }
+    initiallyOpen: { type: Boolean, default: false },
+    onRefresh: { type: Function, default: null }
 })
 const isVisible = ref(props.initiallyOpen)
 const pgnListToRender = ref([])
 const isLoading = ref(false)
+const isRefreshing = ref(false)
 
 function add5() {
     setTimeout(() => {
@@ -65,13 +79,8 @@ function add5() {
 
 // Watch for changes to pgnList with debouncing
 watch(() => props.pgnList, (newPgnList, oldPgnList) => {
-    if (isLoading.value) return
 
-    // Reset if the list changes significantly
-    if (!oldPgnList || newPgnList.length !== oldPgnList.length) {
-        pgnListToRender.value = []
-    }
-
+    pgnListToRender.value = []
     add5()
 }, { immediate: true })
 
@@ -96,6 +105,20 @@ const toggleVisibility = async () => {
     isLoading.value = false
 };
 
+// Handle refresh button click
+const handleRefresh = async () => {
+    if (props.onRefresh && !isRefreshing.value) {
+        isRefreshing.value = true
+        try {
+            await props.onRefresh()
+        } catch (error) {
+            console.error('Error refreshing data:', error)
+        } finally {
+            isRefreshing.value = false
+        }
+    }
+}
+
 onMounted(() => {
     isLoading.value = true
 })
@@ -113,6 +136,27 @@ onMounted(() => {
     bottom: -20px;
     left: 50%;
     cursor: pointer;
+}
+
+.refresh-btn {
+    border-color: #aaa23a;
+    color: #aaa23a;
+    background-color: transparent;
+}
+
+.refresh-btn:hover {
+    background-color: #aaa23a;
+    color: white;
+    border-color: #aaa23a;
+}
+
+.refresh-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.refresh-btn .material-icons {
+    font-size: 18px;
 }
 
 .card-like {

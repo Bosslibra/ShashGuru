@@ -14,6 +14,22 @@ const isQueriedVisibile = ref(true)
 const searchHasHappened = ref(false)
 const searchInput = ref('')
 
+// Add refresh functions for each event section
+async function refreshQueriedEvent() {
+  if (roundId.value) {
+    const pgnAsked = await fetchPgn(roundId.value)
+    if (pgnAsked) {
+      pgnListAsked.value = splitPGNs(pgnAsked)
+    }
+  }
+}
+
+async function refreshFeaturedEvent() {
+  if (featuredEvent.value) {
+    await fetchPgnFeatured()
+  }
+}
+
 // Fetch tournament info and list of rounds
 async function fetchEvent() {
   error.value = null
@@ -107,6 +123,12 @@ const featuredEventTitle = computed(() => {
   return match ? match[1] : 'Event Name Unknown'
 })
 
+const queriedEventTitle = computed(() => {
+  if (!pgnListAsked.value.length) return 'Loading Event Title...'
+  const match = pgnListAsked.value[0].match(/\[Event "(.*?)"\]/)
+  return match ? match[1] : 'Event Name Unknown'
+})
+
 onMounted(() => {
   // Automatically fetch event info on mount
   featuredEvent.value = import.meta.env.FEATURED_EVENT_ID || 'bFcndX91' // Test featured event ID, should be null in production
@@ -150,13 +172,13 @@ onMounted(() => {
   <!-- Queried Event -->
 
   <EventSection v-if="searchHasHappened && roundId && isQueriedVisibile" :title="queriedEventTitle || 'Your Query'"
-    :pgnList="pgnListAsked" :shouldRender="searchHasHappened" initiallyOpen id="queried-results" />
+    :pgnList="pgnListAsked" :shouldRender="searchHasHappened" :onRefresh="refreshQueriedEvent" initiallyOpen id="queried-results" />
 
 
   <div v-if="featuredEvent" class="fs-3 ms-5 m-4">Featured Event</div>
   <!-- Featured Event -->
   <EventSection v-if="featuredEvent" :title="featuredEventTitle || 'Featured Event'" :pgnList="pgnListFeatured"
-    :shouldRender="isFeatureVisibile" initiallyOpen />
+    :shouldRender="isFeatureVisibile" :onRefresh="refreshFeaturedEvent" initiallyOpen />
 
   <footer class="mb-5"></footer>
 </template>
