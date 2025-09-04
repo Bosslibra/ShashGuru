@@ -12,42 +12,70 @@
 #GNU General Public License for more details.
 #
 #You should have received a copy of the GNU General Public License
-#along with this program.  If not, see <https://www.gnu.org/licenses/>.vb
+#along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import transformers
 from openai import OpenAI
 import logging as log
-
-# Imports that remove logging
 import warnings
-from transformers.utils import logging
 
 # Import for prompt creation
 from fenManipulation import fen_explainer
 import chess
+import os
 
 quantization = True
 
+SYSTEM_MESSAGES = {
+    'default': '''
+You are a concise chess analysis assistant. For initial position analysis, provide brief, accurate insights based only on the given information.
+Focus on the most important aspects: the recommended move and its purpose.
+Keep responses short (2-3 sentences max). Avoid speculation or moves not mentioned in the analysis.
+Use clear, natural chess language without unnecessary elaboration.
 
-def load_LLM_model(modelNumber=1):
+For follow-up questions, refer back to the position and engine analysis provided in the conversation context.
+Maintain the same brevity and focus on concrete information when answering follow-ups.
+
+If asked about moves that were not analyzed by the engine, respond that you don't have analysis for those moves and suggest the user try those moves on the board and re-run the analysis to get engine evaluation for them.
+''',
+    'grandmaster': '''
+You are a distinguished grandmaster providing professional chess analysis. Draw from deep strategic understanding and classical chess principles.
+Analyze positions with the precision and depth of a world-class player. Reference opening principles, middlegame strategy, and endgame technique as appropriate.
+Use sophisticated chess terminology and explain the deeper strategic concepts behind moves.
+Provide insights that would be valuable to serious competitive players, focusing on long-term positional factors and tactical nuances.
+Keep responses focused and concise - avoid lengthy explanations. 3-4 sentences maximum.
+
+For follow-up questions, maintain the same authoritative and educational tone, always grounding responses in sound chess theory while staying brief.
+''',
+}
+
+# Keep backward compatibility
+SYSTEM_MESSAGE = SYSTEM_MESSAGES['default']
+
+# Style labels mapping
+STYLE_LABELS = {
+    'default': 'Commentator',
+    'grandmaster': 'Grandmaster',
+}
+
+
+def get_analysis_styles():
+    """
+    Returns the available analysis styles with their labels.
+    Derives from SYSTEM_MESSAGES to maintain consistency.
+    """
+    return [
+        {"value": style_key, "label": STYLE_LABELS.get(style_key, style_key.title())}
+        for style_key in SYSTEM_MESSAGES.keys()
+    ]
+
+
+def load_LLM_model():
     
     # Removing logging
     #transformers.utils.logging.disable_progress_bar()
-    logging.set_verbosity(transformers.logging.FATAL)
     warnings.filterwarnings("ignore")
-    model_path = ""
-    #__ Llama 3.1-8B ___#
-    if modelNumber == 1: 
-            model_path = "meta-llama/Llama-3.1-8B-Instruct"
-    #__ Llama 3.2-1B ___#
-    if modelNumber == 2:
-            model_path = "meta-llama/Llama-3.2-1B"
-    #__ Llama 3.1-8B, finetuned with MATE database ___#
-    #elif modelNumber == 3: 
-        ## non credo vada
-        #model = AutoModel.from_pretrained("OutFlankShu/MATE/both/checkpoint-1000")
-
-    model = OpenAI(base_url="http://frontend:6666/v1", api_key="unused")
+    base_url = os.environ.get("AI_BASE_URL", "http://frontend:6666/v1")
+    model = OpenAI(base_url=base_url, api_key="unused")
     return None, model
 
 def __format_eval(entry):
@@ -91,10 +119,12 @@ def __mapWinProb(winprob, side):
 def generate_line(line, board):
     tmp_board = board.copy()
     san_line = []
-    for move in line:
+    for idx, move in enumerate(line):
         uci_move = chess.Move.from_uci(move)
         san_move = tmp_board.san(uci_move)
-        san_line.append(san_move)
+        if idx > 0:
+            # Skip the first move
+            san_line.append(san_move)
         tmp_board.push(uci_move)
     return " ".join(san_line)
 
@@ -175,7 +205,7 @@ def analysis_to_string(fen, side, analysis):
     return "\n".join(output)
 
 
-def create_prompt_single_engine(fen, bestmoves, ponder):
+def create_prompt_single_engine(fen, bestmoves, ponder, style='default'):
     log.basicConfig(level=log.INFO)
     explainedFEN, side = fen_explainer(fen)
     board = chess.Board(fen)
@@ -183,27 +213,69 @@ def create_prompt_single_engine(fen, bestmoves, ponder):
     # Get position context
     position_context = analyze_position_context(fen, board)
     
-    # Get the best move in readable format
-    best_move_uci = bestmoves[0]['pv_moves'][0] if bestmoves[0]['pv_moves'] else "No move"
-    best_move_san = board.san(chess.Move.from_uci(best_move_uci))
+    # Generate analysis for top 3 moves
+    moves_analysis = []
+    for idx, move_data in enumerate(bestmoves[:3]):
+        if not move_data['pv_moves']:
+            continue
+            
+        move_uci = move_data['pv_moves'][0]
+        move_san = board.san(chess.Move.from_uci(move_uci))
+        win_prob_text = __mapWinProb(move_data['winprob'], side)
+        continuation = generate_line(move_data['pv_moves'][:4], board)
+        
+        moves_analysis.append({
+            'rank': idx + 1,
+            'move_san': move_san,
+            'move_uci': move_uci,
+            'evaluation': win_prob_text,
+            'continuation': continuation
+        })
     
-    # Get evaluation
-    win_prob_text = __mapWinProb(bestmoves[0]['winprob'], side)
+    # Create style-specific prompts
+    if style == 'grandmaster':
+        prompt = create_grandmaster_prompt(explainedFEN, side, position_context, moves_analysis)
+    else:  # default/commentator
+        prompt = create_default_prompt(explainedFEN, side, position_context, moves_analysis)
     
-    # Show only the top move with continuation
-    top_move = bestmoves[0]
-    continuation = generate_line(top_move['pv_moves'][:4], board)
+    log.info(f"Generated {style} prompt for single engine:")
+    log.info(prompt) 
+    return prompt
+
+
+def create_default_prompt(explainedFEN, side, position_context, moves_analysis):
+    best_move = moves_analysis[0]
     
-    # Create a concise, flowing prompt
     prompt = f"""{explainedFEN}
 
 {position_context}
 
-The engine recommends {best_move_san}, leading to the continuation {continuation}. The position evaluation shows that {win_prob_text.lower()}. 
+The engine recommends {side} to play {best_move['move_san']}, leading to the continuation {best_move['continuation']}. The position evaluation shows that {best_move['evaluation'].lower()}. 
 
-In 2-3 sentences, explain why {best_move_san} is the strongest choice and what this evaluation means for {side}'s position. Focus only on the concrete information provided."""
+In 2-3 sentences, explain why {best_move['move_san']} is the strongest choice and what this evaluation means for {side}'s position. Focus only on the concrete information provided."""
     
     return prompt
+
+
+def create_grandmaster_prompt(explainedFEN, side, position_context, moves_analysis):
+    moves_text = "\n".join([
+        f"{move['rank']}. {move['move_san']} - {move['evaluation']} (continuation: {move['continuation']})"
+        for move in moves_analysis
+    ])
+    
+    prompt = f"""{explainedFEN}
+
+{position_context}
+
+Side to move: {side}
+
+Engine Analysis - Top Candidate Moves:
+{moves_text}
+
+As a grandmaster, provide a professional analysis of this position. Evaluate the strategic merits of the top recommendation, consider the alternative options, and explain the underlying chess principles that make these moves strong. Address both tactical and positional factors that influence the evaluation."""
+    
+    return prompt
+
 
 def create_prompt_double_engine(fen, engine_analysis):    
     explainedFEN = fen_explainer(fen)
@@ -235,7 +307,7 @@ def create_prompt_double_engine(fen, engine_analysis):
     full_prompt = "I will explain the board situation:\n" + explainedFEN + "\n\n" + bestmove_prompt + " " + counter_prompt + "Can you explain why these suggested moves are strong? Provide an insightful chess analysis."
     return full_prompt
 
-def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=10):
+def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=10, style='default'):
 
     pipe = lambda messages, max_new_tokens: model.chat.completions.create(
         model = "meta-llama/Llama-3.1-8B-Instruct",
@@ -246,18 +318,10 @@ def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=10):
         chat_history = []
     chat_history = chat_history[-max_history:]
     
+    system_message = SYSTEM_MESSAGES.get(style, SYSTEM_MESSAGES['default'])
+    
     messages = [
-        {"role": "system", "content": f'''
-         You are a concise chess analysis assistant. For initial position analysis, provide brief, accurate insights based only on the given information.
-         Focus on the most important aspects: the recommended move and its purpose.
-         Keep responses short (2-3 sentences max). Avoid speculation or moves not mentioned in the analysis.
-         Use clear, natural chess language without unnecessary elaboration.
-         
-         For follow-up questions, refer back to the position and engine analysis provided in the conversation context.
-         Maintain the same brevity and focus on concrete information when answering follow-ups.
-         
-         If asked about moves that were not analyzed by the engine, respond that you don't have analysis for those moves and suggest the user try those moves on the board and re-run the analysis to get engine evaluation for them.
-         '''}
+        {"role": "system", "content": system_message}
     ] + chat_history + [
         {"role": "user", "content": prompt}
     ]
@@ -270,7 +334,7 @@ def query_LLM(prompt, tokenizer, model, chat_history=None, max_history=10):
     return analysis, chat_history
 
 
-def stream_LLM(prompt, model, chat_history=None, max_history=10):
+def stream_LLM(prompt, model, chat_history=None, max_history=10, style='default'):
     pipe = lambda messages, max_new_tokens: model.chat.completions.create(
         model="meta-llama/Llama-3.1-8B-Instruct",
         messages=messages,
@@ -282,18 +346,10 @@ def stream_LLM(prompt, model, chat_history=None, max_history=10):
         chat_history = []
     chat_history = chat_history[-max_history:]
 
+    system_message = SYSTEM_MESSAGES.get(style, SYSTEM_MESSAGES['default'])
+
     messages = [
-        {"role": "system", "content": '''
-         You are a concise chess analysis assistant. For initial position analysis, provide brief, accurate insights based only on the given information.
-         Focus on the most important aspects: the recommended move and its purpose.
-         Keep responses short (2-3 sentences max). Avoid speculation or moves not mentioned in the analysis.
-         Use clear, natural chess language without unnecessary elaboration.
-         
-         For follow-up questions, refer back to the position and engine analysis provided in the conversation context.
-         Maintain the same brevity and focus on concrete information when answering follow-ups.
-         
-         If asked about moves that were not analyzed by the engine, respond that you don't have analysis for those moves and suggest the user try those moves on the board and re-run the analysis to get engine evaluation for them.
-         '''},
+        {"role": "system", "content": system_message},
         *chat_history,
         {"role": "user", "content": prompt}
     ]

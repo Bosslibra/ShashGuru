@@ -15,27 +15,140 @@
 #along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from flask import Flask, request, Response, stream_with_context, jsonify, json
+from prometheus_client import Summary, Counter, Gauge, generate_latest, CONTENT_TYPE_LATEST
 from flask_cors import CORS
 import argparse
 import logging 
+import time
+from functools import wraps
 
 
 import LLMHandler
 import engineCommunication
 from engineCache import get_cache
 
-app = Flask(__name__)
-CORS(app)
+# Prometheus metrics
+REQUEST_COUNT = Counter(
+    'shashguru_requests_total',
+    'Total number of requests by endpoint',
+    ['endpoint', 'method', 'status']
+)
+
+REQUEST_DURATION = Summary(
+    'shashguru_request_duration_seconds',
+    'Request duration in seconds by endpoint',
+    ['endpoint', 'method']
+)
+
+ACTIVE_REQUESTS = Gauge(
+    'shashguru_active_requests',
+    'Number of active requests by endpoint',
+    ['endpoint']
+)
+
+ERROR_COUNT = Counter(
+    'shashguru_errors_total',
+    'Total number of errors by endpoint',
+    ['endpoint', 'error_type']
+)
+
+# Global variables for model and tokenizer
+tokenizer = None
+model = None
+
+def track_metrics(endpoint_name):
+    """Decorator to track metrics for endpoints"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            method = request.method
+            start_time = time.time()
+            
+            # Increment active requests
+            ACTIVE_REQUESTS.labels(endpoint=endpoint_name).inc()
+            
+            try:
+                # Execute the function
+                response = func(*args, **kwargs)
+                
+                # Determine status code
+                if hasattr(response, 'status_code'):
+                    status = str(response.status_code)
+                elif isinstance(response, tuple) and len(response) > 1:
+                    status = str(response[1])
+                else:
+                    status = '200'
+                
+                # Record successful request
+                REQUEST_COUNT.labels(endpoint=endpoint_name, method=method, status=status).inc()
+                
+                return response
+                
+            except Exception as e:
+                # Record error
+                error_type = type(e).__name__
+                REQUEST_COUNT.labels(endpoint=endpoint_name, method=method, status='500').inc()
+                ERROR_COUNT.labels(endpoint=endpoint_name, error_type=error_type).inc()
+                raise
+                
+            finally:
+                # Record duration and decrement active requests
+                duration = time.time() - start_time
+                REQUEST_DURATION.labels(endpoint=endpoint_name, method=method).observe(duration)
+                ACTIVE_REQUESTS.labels(endpoint=endpoint_name).dec()
+        
+        return wrapper
+    return decorator
+
+def load_models():
+    """Load the LLM model and tokenizer - called once at startup"""
+    global tokenizer, model
+    if tokenizer is None or model is None:
+        logging.info("Loading LLM model...")
+        tokenizer, model = LLMHandler.load_LLM_model()
+        logging.info("Model loaded successfully.")
+
+def create_app():
+    """Application factory function"""
+    app = Flask(__name__)
+    CORS(app)
+    
+    # Load models when creating the app
+    load_models()
+    
+    return app
+
+app = create_app()
+
+
+@app.route("/health", methods=['GET'])
+def health_check():
+    """Health check endpoint for load balancers and monitoring"""
+    return jsonify({
+        "status": "healthy",
+        "model_loaded": model is not None,
+        "tokenizer_loaded": tokenizer is not None
+    }), 200
+
+
+@app.route("/metrics", methods=['GET'])
+def metrics():
+    """Prometheus metrics endpoint"""
+    return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
 
 
 @app.route("/analysis", methods=['GET', 'POST'])
+@track_metrics('analysis')
 def analysis():
     fen = request.json.get('fen')  
     print("Received analysis request for:", fen)
-    depth = 15
-    
-    bestmoves, ponder = engineCommunication.call_engine(fen, depth, lines=3)
-    prompt = LLMHandler.create_prompt_single_engine(fen, bestmoves, ponder)
+    depth = request.json.get('depth', 20)
+    style = request.json.get('style', 'default')
+
+    # Request 3 lines for multiple move analysis for complex personas
+    lines = 1 if style == "default" else 3
+    bestmoves, ponder = engineCommunication.call_engine(fen, depth, lines=lines)
+    prompt = LLMHandler.create_prompt_single_engine(fen, bestmoves, ponder, style)
 
     ############################
     #  Questo è per due engine #
@@ -46,7 +159,7 @@ def analysis():
     def generate():
         yield json.dumps({"prompt": prompt}) + "\n[PROMPT_END]\n" # sends single chunk with prompt, to save it as context for responses
         yield "[START_STREAM]\n"  # optional: delimiter for stream start
-        for token in LLMHandler.stream_LLM(prompt, model):  # <-- stream here
+        for token in LLMHandler.stream_LLM(prompt, model, style=style):  # <-- stream here
             yield token
         yield "\n[END_STREAM]"  # optional: delimiter for stream end 
     
@@ -54,16 +167,18 @@ def analysis():
 
 
 @app.route("/response", methods=['GET','POST'])
+@track_metrics('response')
 def response():
     chat_history = request.get_json()
     if chat_history is None:
         chat_history = [] 
     new_question = chat_history[-1].get("content")
+    style = request.args.get('style', 'default')  # Get style from query parameters
     print('Received question:' , new_question)
 
     def generate():
         yield "[START_STREAM]\n"
-        for token in LLMHandler.stream_LLM(new_question, model, chat_history=chat_history[:-1]):
+        for token in LLMHandler.stream_LLM(new_question, model, chat_history=chat_history[:-1], style=style):
             yield token
         yield "\n[END_STREAM]"
 
@@ -71,6 +186,7 @@ def response():
 
 
 @app.route("/evaluation", methods=['GET', 'POST'])
+@track_metrics('evaluation')
 def evaluation():
     """
     Returns engine evaluation for a given FEN position.
@@ -151,6 +267,7 @@ def clear_cache():
 
 
 @app.route("/pgn-analysis", methods=['POST'])
+@track_metrics('pgn_analysis')
 def pgn_analysis():
     """
     Analyzes a complete PGN game using a dedicated engine instance.
@@ -237,6 +354,19 @@ def pool_stats():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/analysis/styles", methods=['GET'])
+def analysis_styles():
+    """
+    Returns available analysis styles.
+    """
+    try:
+        styles = LLMHandler.get_analysis_styles()
+        return jsonify({"styles": styles})
+    except Exception as e:
+        print(f"Error getting analysis styles: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 
     
 
@@ -245,25 +375,9 @@ def pool_stats():
 
 
 if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(description="Run ShashGuru Backend with optional flags.")
-    parser.add_argument("--M", action="store_true", help="Use MATE model")
-    parser.add_argument("--S", action="store_true", help="Use Llama3.2-1B model")
-    parser.add_argument("--L", action="store_true", help="Use Llama3.1-8B model")
-    args = parser.parse_args()
-
-    modelNumber = 1
-    if args.L:
-        modelNumber = 1
-    elif args.S:
-        modelNumber = 2
-    elif args.M:
-        modelNumber = 3
-    else: 
-        model_number = 1
-
-    tokenizer, model = LLMHandler.load_LLM_model(modelNumber)
-    logging.info("Loaded model.")
-    #THIS IS NECESSARY, DO NOT REMOVE
+    # This will only run when called directly (not with gunicorn)
+    logging.basicConfig(level=logging.INFO)
+    load_models()
+    logging.info("Starting development server...")
     app.run(host="0.0.0.0", port=5000, debug=True)
     

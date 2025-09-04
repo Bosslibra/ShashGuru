@@ -7,11 +7,14 @@ services:
       dockerfile: frontend/Dockerfile
     ports:
       - "80:80"
+      - "443:443"
       - "6666:6666"
     restart: unless-stopped
     volumes:
       - ./config/nginx_vllm.conf:/etc/nginx/nginx.conf:ro
       - ./logs/nginx:/var/log/nginx
+      - ./certbot/www:/var/www/certbot/:ro
+      - ./certbot/conf/:/etc/nginx/ssl/:ro
     depends_on:
       - model_server_0
       - model_server_1
@@ -27,6 +30,7 @@ services:
       dockerfile: backend/Dockerfile
     ports:
       - "5000:5000"
+    cpuset: "0-319"
     restart: unless-stopped
     volumes:
       - ./backend:/app
@@ -148,6 +152,17 @@ services:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     restart: unless-stopped
 
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: nginx-exporter
+    ports:
+      - "9113:9113"
+    command:
+      - -nginx.scrape-uri=http://frontend/nginx_status
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -168,6 +183,12 @@ services:
       - redis-data:/data
     command: redis-server --appendonly yes --appendfsync everysec
     restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - ./certbot/www/:/var/www/certbot/:rw
+      - ./certbot/conf/:/etc/letsencrypt/:rw
 
 
 volumes:

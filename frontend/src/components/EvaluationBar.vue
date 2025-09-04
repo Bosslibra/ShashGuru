@@ -226,17 +226,20 @@ const fetchEvaluation = async () => {
     evaluationSideToMove.value = isWhiteToMove.value
     
     const result = await EvaluationService.fetchEvaluation(props.fen, props.depth, props.showLines)
-    console.log('Evaluation:', result)
-    evaluation.value = result
-    console.log('Side to move when eval calculated:', evaluationSideToMove.value ? 'White' : 'Black', 'Raw score:', evaluation.value?.score, 'Adjusted score:', evaluationSideToMove.value ? evaluation.value?.score : -evaluation.value?.score)
-    
-    // Emit evaluation data
-    emit('evaluation-update', {
-      bestMove: result?.move || null,
-      evaluation: result?.score || result?.mate || null,
-      depth: props.depth,
-      lines: result?.lines || []
-    })
+
+    if (result.fen === props.fen){
+      console.log('Evaluation:', result)
+      evaluation.value = result
+      
+      // Emit evaluation data
+      emit('evaluation-update', {
+        fen: result?.fen,
+        bestMove: result?.move || null,
+        evaluation: result?.score || result?.mate || null,
+        depth: props.depth,
+        lines: result?.lines || []
+      })
+    }
   } catch (err) {
     console.error('Error fetching evaluation:', err)
     error.value = 'Failed to get evaluation'
@@ -250,9 +253,11 @@ const fetchEvaluation = async () => {
       lines: []
     })
   } finally {
-    loading.value = false
-    // Emit loading state
-    emit('loading-update', false)
+    if (evaluation.value?.fen === props.fen) {
+      loading.value = false
+      // Emit loading state
+      emit('loading-update', false)
+    }
   }
 }
 

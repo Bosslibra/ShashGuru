@@ -26,6 +26,7 @@ import time
 import atexit
 import sys
 from engineCache import get_cache
+import os
 
 logging.basicConfig(level=logging.INFO)
 engine_name_NNUE = 'shashchess'
@@ -33,12 +34,13 @@ engine_name_HUMAN = 'alexander'
 engine_path_NNUE = f".\\executables\\{engine_name_NNUE}.exe" if os.name == 'nt' else f"./executables/{engine_name_NNUE}"
 engine_path_HUMAN = f".\\executables\\{engine_name_HUMAN}.exe" if os.name == 'nt' else f"./executables/{engine_name_HUMAN}"
 
+POOL_SIZE=int(os.environ.get("ENGINE_POOL_SIZE", 8))
 
 class EnginePool:
     """
     Manages a pool of pre-initialized UCI chess engines for better performance.
     """
-    def __init__(self, engine_path, pool_size=8):
+    def __init__(self, engine_path, pool_size=POOL_SIZE):
         self.engine_path = engine_path
         self.pool_size = pool_size
         self.available_engines = queue.Queue()
@@ -177,7 +179,7 @@ def _initialize_nnue_pool():
     
     logging.info("Initializing NNUE engine pool at startup...")
     try:
-        _nnue_pool = EnginePool(engine_path_NNUE, pool_size=8)
+        _nnue_pool = EnginePool(engine_path_NNUE, pool_size=POOL_SIZE)
         logging.info("NNUE engine pool initialized successfully at startup")
     except Exception as e:
         logging.error(f"Failed to initialize NNUE engine pool at startup: {e}")
@@ -191,12 +193,12 @@ def _get_engine_pool(engine_path):
         if engine_path == engine_path_NNUE:
             if _nnue_pool is None:
                 logging.warning("NNUE pool not initialized at startup, creating now...")
-                _nnue_pool = EnginePool(engine_path, pool_size=8)
+                _nnue_pool = EnginePool(engine_path, pool_size=POOL_SIZE)
             return _nnue_pool
         elif engine_path == engine_path_HUMAN:
             if _human_pool is None:
                 logging.info("Lazy initializing HUMAN engine pool...")
-                _human_pool = EnginePool(engine_path, pool_size=8)
+                _human_pool = EnginePool(engine_path, pool_size=POOL_SIZE)
             return _human_pool
         else:
             # For other engine paths, create a temporary pool
@@ -346,7 +348,9 @@ def analyze_pgn_game(pgn_moves, depth=15, lines=3, engine_path=engine_path_NNUE)
         engine.stdin.flush()
         
         # Set optimized options for game analysis
-        engine.stdin.write('setoption name Threads value 256\n')
+        # Get the number of available CPUs and divide by pool_size
+        n_threads = os.cpu_count() // POOL_SIZE
+        engine.stdin.write(f'setoption name Threads value {n_threads}\n')
         engine.stdin.flush()
         engine.stdin.write('setoption name Hash value 64\n')
         engine.stdin.flush()

@@ -46,7 +46,8 @@ export class EvaluationService {
         // Store both the evaluation and the side info for proper interpretation
         const result = {
           ...response.data.evaluation,
-          sideToMove: isWhiteToMove ? 'white' : 'black'
+          sideToMove: isWhiteToMove ? 'white' : 'black',
+          fen: fen
         }
         
         // Cache the result
