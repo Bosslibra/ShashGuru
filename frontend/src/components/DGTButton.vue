@@ -46,13 +46,11 @@ function reconstructFen() {
         ? new Chess(fenHistory.value[fenHistory.value.length - 1])
         : new Chess(startFen);
 
-    //for (const move of moves.value) {
     if (lastMove.value) {
         const result = game.move(lastMove.value);
         if (!result) {
             console.warn(`Invalid move: ${lastMove.value}`);
         }}
-    //}
     return game.fen();
 }
 const toggleConnection = () => {
@@ -107,47 +105,7 @@ onUnmounted(() => {
         <span v-if="isConnecting" class="activity-dot bg-warning"></span>
         <span v-else-if="active" class="activity-dot active"></span>
         <span v-else class="activity-dot bg-danger"></span>
-        <span class="activity-dot bg-warning" v-if="moveInProgress"></span>
     </button>
-    <!--
-    <div v-if="active">
-      <div>
-        <label>FEN:</label>
-        <input v-model="fenInput" placeholder="Enter FEN" />
-        <button @click="setupBoard">Setup</button>
-      </div>
-
-      <div>
-        <button @click="flipBoard">Flip Board</button>
-      </div>
-
-      <div>
-        <strong>Latest move:</strong> {{ lastMove }}
-      </div>
-
-      <div>
-        <strong>Move list:</strong>
-        <span v-if="moves.length === 0">[none yet]</span>
-        <ul>
-          <li v-for="(m, i) in moves" :key="i">{{ i + 1 }}. {{ m }}</li>
-        </ul>
-      </div>
-
-      <div>
-        <strong>Board FEN:</strong> {{ position }}
-      </div>
-
-      <div>
-        <strong>Clock:</strong> {{ clock }}
-      </div>
-
-      <div>
-        <strong>Match:</strong>
-        <span :style="{ color: match ? 'green' : 'red' }">{{ match }}</span>
-      </div>
-    </div>
-    -->
-
 </template>
 
 <style scoped>
