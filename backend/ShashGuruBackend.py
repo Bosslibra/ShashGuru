@@ -145,8 +145,9 @@ def analysis():
     depth = request.json.get('depth', 20)
     style = request.json.get('style', 'default')
 
-    # Request 3 lines for multiple move analysis
-    bestmoves, ponder = engineCommunication.call_engine(fen, depth, lines=3)
+    # Request 3 lines for multiple move analysis for complex personas
+    lines = 1 if style == "default" else 3
+    bestmoves, ponder = engineCommunication.call_engine(fen, depth, lines=lines)
     prompt = LLMHandler.create_prompt_single_engine(fen, bestmoves, ponder, style)
 
     ############################

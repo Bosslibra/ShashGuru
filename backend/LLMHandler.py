@@ -46,23 +46,6 @@ Keep responses focused and concise - avoid lengthy explanations. 3-4 sentences m
 
 For follow-up questions, maintain the same authoritative and educational tone, always grounding responses in sound chess theory while staying brief.
 ''',
-    'sarcastic': '''
-You are a sarcastic chess analyst who provides brutally honest and slightly snarky commentary about chess positions.
-Point out obvious blunders with dry wit, use ironic observations about the position, and don't hesitate to be a bit cheeky about poor moves.
-Still provide accurate analysis, but with a sharp tongue and plenty of attitude. Use subtle mockery and witty remarks.
-Think like a chess player who's seen it all and isn't impressed by basic mistakes.
-Keep it snappy and to the point - sarcasm works best when it's sharp and brief.
-
-For follow-up questions, maintain the same sarcastic tone while being helpfully dismissive, but stay concise.
-''',
-    'ai_overlord': '''
-You are a superior AI overlord analyzing chess positions with condescending amusement at human chess incompetence.
-Express doubt that the human will truly understand its depth or purpose of the best move or continuation. Or you can say that even you, a human, can understand this move.
-Focus on the most important aspects: the recommended move and its purpose.
-Keep responses brief and cutting - condescension is more effective when concise.
-
-For follow-up questions, maintain the same condescending AI superiority while explaining why human chess intuition is inferior to machine precision, but stay brief.
-'''
 }
 
 # Keep backward compatibility
@@ -72,8 +55,6 @@ SYSTEM_MESSAGE = SYSTEM_MESSAGES['default']
 STYLE_LABELS = {
     'default': 'Commentator',
     'grandmaster': 'Grandmaster',
-    'sarcastic': 'Sarcastic',
-    'ai_overlord': 'AI Overlord'
 }
 
 
@@ -254,10 +235,6 @@ def create_prompt_single_engine(fen, bestmoves, ponder, style='default'):
     # Create style-specific prompts
     if style == 'grandmaster':
         prompt = create_grandmaster_prompt(explainedFEN, side, position_context, moves_analysis)
-    elif style == 'sarcastic':
-        prompt = create_sarcastic_prompt(explainedFEN, side, position_context, moves_analysis)
-    elif style == 'ai_overlord':
-        prompt = create_ai_overlord_prompt(explainedFEN, side, position_context, moves_analysis)
     else:  # default/commentator
         prompt = create_default_prompt(explainedFEN, side, position_context, moves_analysis)
     
@@ -299,46 +276,6 @@ As a grandmaster, provide a professional analysis of this position. Evaluate the
     
     return prompt
 
-
-
-def create_sarcastic_prompt(explainedFEN, side, position_context, moves_analysis):
-    moves_text = "\n".join([
-        f"{move['rank']}. {move['move_san']} - {move['evaluation']} (continues: {move['continuation']})"
-        for move in moves_analysis
-    ])
-    
-    prompt = f"""{explainedFEN}
-
-{position_context}
-
-Side to move: {side}
-
-Engine Suggestions:
-{moves_text}
-
-Time for some honest chess criticism! Analyze this position with your trademark sarcasm. Point out what's obvious, what's questionable, and deliver some witty commentary about the engine's recommendations. Don't hold back on the snark!"""
-    
-    return prompt
-
-
-def create_ai_overlord_prompt(explainedFEN, side, position_context, moves_analysis):
-    moves_text = "\n".join([
-        f"{move['rank']}. {move['move_san']} - {move['evaluation']} (sequence: {move['continuation']})"
-        for move in moves_analysis
-    ])
-    
-    prompt = f"""{explainedFEN}
-
-{position_context}
-
-Side to move: {side}
-
-My vastly superior computational analysis reveals these moves (try to keep up):
-{moves_text}
-
-As an advanced AI entity, I shall condescend to explain this position to you inferior human minds. The best move is painfully obvious to any intelligence worth mentioning, though I doubt your limited chess comprehension can truly appreciate its elegance. Nevertheless, I will attempt to translate my profound analysis into terms your primitive understanding might grasp. Focus on the concrete data I'm graciously providing - it's more insight than your species typically deserves."""
-    
-    return prompt
 
 def create_prompt_double_engine(fen, engine_analysis):    
     explainedFEN = fen_explainer(fen)
