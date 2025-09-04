@@ -3,7 +3,8 @@ import { ref, watch, nextTick, onMounted } from 'vue';
 import { validateFen } from 'fentastic';
 import MarkdownIt from 'markdown-it';
 
-const server_url = import.meta.env.BASE_URL + 'backend'
+const remote_server_url = import.meta.env.BASE_URL + 'backend'
+const local_server_url = 'http://localhost:5000'
 const starting_fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 //emits
 const emit = defineEmits(['loadingChat']);
@@ -35,13 +36,62 @@ const analysisStyles = ref([
 ]);
 
 const isClipboardCopyingAvailable = ref(true)
+const isLocalBackendAvailable = ref(false)
+const checkingLocalBackend = ref(true)
+
+// Computed property for server URL
+const server_url = ref(remote_server_url)
 
 // Methods
+
+async function checkLocalBackendAvailability() {
+    console.log("Checking local backend availability...");
+    try {
+        // Check if local backend is available by testing the health endpoint first
+        const healthCheck = await fetch(local_server_url + '/health', { 
+            method: 'GET',
+            signal: AbortSignal.timeout(500) // 500ms timeout
+        });
+
+        if (healthCheck.ok) {
+            // Double-check with analysis/styles endpoint to ensure AI functionality is available
+            const stylesCheck = await fetch(local_server_url + '/analysis', { 
+                method: 'OPTIONS',
+                signal: AbortSignal.timeout(500)
+            });
+            
+            if (stylesCheck.ok) {
+                console.log("Local backend detected and AI endpoints available! Switching to localhost.");
+                isLocalBackendAvailable.value = true;
+                server_url.value = local_server_url;
+                return;
+            }
+        }
+        
+        console.log("Local backend not available. Using remote server.");
+        isLocalBackendAvailable.value = false;
+        server_url.value = remote_server_url;
+        
+    } catch (error) {
+        console.log("Error checking local backend:", error);
+        isLocalBackendAvailable.value = false;
+        server_url.value = remote_server_url;
+    } finally {
+        checkingLocalBackend.value = false;
+    }
+}
+
+async function recheckLocalBackend() {
+    checkingLocalBackend.value = true;
+    await checkLocalBackendAvailability();
+    // Re-fetch styles from the newly selected server
+    await fetchAnalysisStyles();
+}
 
 async function fetchAnalysisStyles() {
     console.log("Fetching analysis styles from server...");
     try {
-        const response = await fetch(server_url + '/analysis/styles');
+        const response = await fetch(remote_server_url + '/analysis/styles');
         if (response.ok) {
             const data = await response.json();
             if (data.styles && Array.isArray(data.styles)) {
@@ -52,6 +102,8 @@ async function fetchAnalysisStyles() {
                     analysisStyles.value.unshift({ value: 'default', label: 'Commentator' });
                 }
             }
+        } else {
+            console.warn('Failed to fetch analysis styles, using fallback');
         }
     } catch (error) {
         console.error('Error fetching analysis styles:', error);
@@ -70,7 +122,7 @@ async function sendMessageSTREAMED() {
     scrollToBottom();
 
     try {
-        const response = await fetch(server_url + `/response?style=${selectedStyle.value}`, {
+        const response = await fetch(server_url.value + `/response?style=${selectedStyle.value}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -140,7 +192,7 @@ async function startAnalysisSTREAMED() {
         emit('loadingChat', true);
 
         try {
-            const response = await fetch(server_url + '/analysis', {
+            const response = await fetch(server_url.value + '/analysis', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -285,9 +337,10 @@ async function regenerateMessage(index) {
     await sendMessageSTREAMED()
 }
 
-onMounted(() =>{
-    fetchAnalysisStyles()
+onMounted(async () => {
     isClipboardCopyingAvailable.value = navigator.clipboard.writeText ? true : false
+    await checkLocalBackendAvailability()
+    await fetchAnalysisStyles()
 })
 
 </script>
@@ -329,6 +382,24 @@ onMounted(() =>{
                 <div class="text-break text-start ">
                     <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                 </div>
+            </div>
+        </div>
+
+        <!-- AI PC Status Indicator -->
+        <div class="ai-pc-status text-center mb-2">
+            <div v-if="checkingLocalBackend" class="d-flex justify-content-center align-items-center gap-2">
+                <span class="spinner-border spinner-border-sm text-warning" role="status" aria-hidden="true"></span>
+                <small class="text-warning">Checking local AI PC...</small>
+            </div>
+            <div v-else-if="isLocalBackendAvailable" class="d-flex justify-content-center align-items-center gap-2">
+                <div class="status-indicator status-online"></div>
+                <small class="text-success fw-bold">AI PC Enabled</small>
+                <button class="btn btn-sm p-1 ms-2 refresh-btn" 
+                        @click="recheckLocalBackend" 
+                        title="Re-check local backend"
+                        :disabled="checkingLocalBackend">
+                    <span class="material-icons-outlined" style="font-size: 14px;">refresh</span>
+                </button>
             </div>
         </div>
 
@@ -453,6 +524,56 @@ h6 {
 .disclaimer-text small {
     font-size: 0.75rem;
     opacity: 0.8;
+}
+
+.ai-pc-status {
+    border-bottom: 1px solid #3a3a3a;
+    padding-bottom: 8px;
+}
+
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-online {
+    background-color: #28a745;
+    box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
+    animation: pulse 2s infinite;
+}
+
+.status-offline {
+    background-color: #6c757d;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
+    }
+    50% {
+        box-shadow: 0 0 16px rgba(40, 167, 69, 0.8);
+    }
+    100% {
+        box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
+    }
+}
+
+.refresh-btn {
+    background: none;
+    border: none;
+    color: #6c757d;
+    transition: color 0.2s ease;
+}
+
+.refresh-btn:hover:not(:disabled) {
+    color: #aaa23a;
+}
+
+.refresh-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .style-selector {
