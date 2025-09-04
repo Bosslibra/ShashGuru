@@ -152,6 +152,17 @@ services:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     restart: unless-stopped
 
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: nginx-exporter
+    ports:
+      - "9113:9113"
+    command:
+      - -nginx.scrape-uri=http://frontend/nginx_status
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
