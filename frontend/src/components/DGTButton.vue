@@ -1,45 +1,76 @@
 <script setup>
 import { useDGT } from "@/services/useDGT";
 import { onUnmounted, ref, watch } from "vue";
-//import { Chess } from "chess.js";
+import { Chess } from "chess.js";
 
 // Define the emit
 const emit = defineEmits(["update:fen"]);
-const startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 //const chess = new Chess();
 const {
     active,
-    //lastMove,
-    //moves,
+    lastMove,
+    moves,
     position,
     //clock,
     //match,
     connect,
     disconnect,
-    //setup,
+    setup,
     //flip,
 } = useDGT();
-/*
+
 // Track which board feedId we want to control (for now assume first = 1)
 const selectedFeedId = ref(1);
 
 // Example FEN for setup
 const fenInput = ref("startpos"); // can replace with real FEN
-*/
+
 // Track full FEN locally
+/*
 const moveNumber = ref(1);
-const isWhite = ref(true); // start with white to move
-let lastBoard = ""; // previous piece placement
+const whoShouldMove = ref('w'); // start with white to move
+*/
+const moveInProgress = ref(false);
+const isConnecting = ref(false);
+const startFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"; // previous piece placement
+const fenHistory = ref([])
 
+function cleanup() {
+    fenHistory.value = []
+}
 
+function reconstructFen() {
+    console.log("Moves", moves.value)
+    console.log("lastmove", lastMove.value)
+    const game = (fenHistory.value && fenHistory.value.length > 0)
+        ? new Chess(fenHistory.value[fenHistory.value.length - 1])
+        : new Chess(startFen);
+
+    //for (const move of moves.value) {
+    if (lastMove.value) {
+        const result = game.move(lastMove.value);
+        if (!result) {
+            console.warn(`Invalid move: ${lastMove.value}`);
+        }}
+    //}
+    return game.fen();
+}
 const toggleConnection = () => {
     if (active.value) {
         disconnect();
+        cleanup();
     } else {
+        console.log("Connecting...")
         connect();
+        console.log("Connected.\nSetting up...")
+        isConnecting.value = true;
+        setTimeout(() => {
+            setupBoard()
+            isConnecting.value = false;
+        }, 100)
     }
 };
-/*
+
 // Call setup for SAN reconstruction
 const setupBoard = () => {
     if (fenInput.value === "startpos") {
@@ -52,99 +83,19 @@ const setupBoard = () => {
     }
 };
 
-// Flip board orientation
-const flipBoard = () => {
-    flip(selectedFeedId.value, true);
-};
-*/
-
-/**
- * Determine who played the last move based on board positions
- * Handles normal moves, captures, castling, and promotions.
- * @param {string} oldBoard - previous board string
- * @param {string} newBoard - current board string
- * @returns {'w' | 'b'} - 'w' if white moved, 'b' if black moved
- */
-const detectLastPlayer = (oldBoard, newBoard) => {
-    if (!oldBoard || !newBoard) {
-        if (newBoard.trim() === startpos.trim()) {
-            return "b" // we fake that black has played last when starting position
-        }
-        else {
-            return null
-        }
-    }
-
-    const oldRows = oldBoard.split('/');
-    const newRows = newBoard.split('/');
-
-    // Track moved pieces
-    const movedPieces = [];
-
-    for (let r = 0; r < 8; r++) {
-        const oldRow = expandFENRow(oldRows[r]);
-        const newRow = expandFENRow(newRows[r]);
-
-        for (let c = 0; c < 8; c++) {
-            if (oldRow[c] !== newRow[c]) {
-                // If a piece disappeared or appeared, record it
-                if (oldRow[c] !== '.') movedPieces.push(oldRow[c]);
-                if (newRow[c] !== '.') movedPieces.push(newRow[c]);
-            }
-        }
-    }
-
-    // Decide based on the first moved piece (normal moves or captures)
-    for (const p of movedPieces) {
-        if (p >= 'A' && p <= 'Z') return 'w';
-        if (p >= 'a' && p <= 'z') return 'b';
-    }
-
-    // Fallback, shouldn't happen in normal moves
-    return null;
-};
-
-
-/**
- * Expand a FEN row string into 8 characters
- * 'rnbqkbnr' -> 'rnbqkbnr'
- * 'pppppppp' -> 'pppppppp'
- * '8' -> '........'
- */
-const expandFENRow = (row) => {
-    let expanded = '';
-    for (const ch of row) {
-        if (ch >= '1' && ch <= '8') {
-            expanded += '.'.repeat(Number(ch));
-        } else {
-            expanded += ch;
-        }
-    }
-    return expanded;
-};
-
-
 
 // Emit best-effort FEN on board change
 watch(position, (newBoard) => {
     if (!newBoard) return;
+    
+    fenHistory.value.push(reconstructFen())
+    emit("update:fen", fenHistory.value[fenHistory.value.length - 1]);
 
-    const player = detectLastPlayer(lastBoard, newBoard);
-    console.log("Last move played by:", player);
-    // Only increment move number after black moves
-    if (player === 'b') moveNumber.value += 1;
-    const colorToMove = player === 'w' ? 'b': 'w'; // player indicates who has played last, so we invert it for who has to play next
-    const fullFEN = `${newBoard} ${colorToMove} KQkq - 0 ${moveNumber.value}`; 
-
-    // Toggle color for next change
-    isWhite.value = !isWhite.value;
-    lastBoard = newBoard;
-
-    emit("update:fen", fullFEN);
 });
 
 onUnmounted(() => {
     disconnect();
+    cleanup();
 });
 </script>
 
@@ -153,7 +104,10 @@ onUnmounted(() => {
     <button class="btn btn-sm m-1" @click="toggleConnection"
         :style="active ? 'background-color: #aa23a; !important' : ''">
         Use DGT e-Board
-        <span class="activity-dot" :class="active ? 'active':'bg-danger'"></span>
+        <span v-if="isConnecting" class="activity-dot bg-warning"></span>
+        <span v-else-if="active" class="activity-dot active"></span>
+        <span v-else class="activity-dot bg-danger"></span>
+        <span class="activity-dot bg-warning" v-if="moveInProgress"></span>
     </button>
     <!--
     <div v-if="active">
@@ -207,6 +161,7 @@ button.btn {
     transition: background 0.2s, color 0.2s, box-shadow 0.2s;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
+
 .activity-dot {
     width: .8em;
     height: .8em;
@@ -214,9 +169,11 @@ button.btn {
     display: inline-block;
     margin-left: 5px;
 }
+
 .active {
     background-color: green;
 }
+
 .inactive {
     background-color: red;
 }

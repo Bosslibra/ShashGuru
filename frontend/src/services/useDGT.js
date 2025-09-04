@@ -93,25 +93,28 @@ export function useDGT() {
       // Step 2: feed updates
       if (message.response === "feed") {
         
-        const feedId = message.id;
+        //const feedId = message.id;
         const param = message.param;
-        console.log("PARAM", param)
-        console.log(param.san)
-        if (param.board) {
-          position.value = param.board;
-        }
-
-        if (param.clock) {
-          clock.value = param.clock;
-        }
-
         if (param.san) {
-          moves.value = param.san;
-          lastMove.value = param.san[param.san.length - 1] || "";
-        }
+          console.log("PARAM", param)
+          console.log(param.san)
 
-        if (param.match !== undefined) {
-          match.value = param.match;
+          if (param.board) {
+            position.value = param.board;
+          }
+
+          if (param.clock) {
+            clock.value = param.clock;
+          }
+
+          if (param.san) {
+            moves.value = param.san;
+            lastMove.value = param.san[param.san.length - 1] || "";
+          }
+
+          if (param.match !== undefined) {
+            match.value = param.match;
+          }
         }
       }
     };
