@@ -143,7 +143,7 @@ function setFromUrl(url) {
 
 const queriedEventTitle = computed(() => {
   if (!pgnListAsked.value.length) return 'Loading Event Title...'
-  const match = pgnListAsked.value[0].match(/\[Event "(.*?)"\]/)
+  const match = pgnListAsked.value[0].match(/\[BroadcastName "(.*?)"\]/)
   return match ? match[1] : 'Event Name Unknown'
 })
 
