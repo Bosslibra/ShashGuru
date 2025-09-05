@@ -231,4 +231,7 @@ onMounted(() => {
   border: 1px solid #aaa23a !important;
   color: white;
 }
+#search-button:hover {
+  background-color: #9a9435 !important;
+}
 </style>

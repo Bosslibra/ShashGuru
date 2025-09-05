@@ -1,23 +1,19 @@
 <template>
     <div v-if="shouldRender" class="card-like event-section mx-5 mb-2 pb-3 position-relative">
-        <div class="d-flex flex-row align-items-center justify-content-between p-3 event-header">
-            <div class="fs-4 flex-shrink-0 cursor-pointer" @click="toggleVisibility">
+        <div class="d-flex flex-row align-items-center justify-content-between p-3 event-header" @click="toggleVisibility">
+            <div class="fs-4 flex-shrink-0 cursor-pointer">
                 <span>{{ title }}</span>
                 <span class="material-icons ms-1">
                     {{ isVisible ? 'keyboard_arrow_down' : 'chevron_right' }}
                 </span>
             </div>
-            <div class="d-flex gap-2">
+            <div class="d-flex">
                 <!-- Refresh Button -->
-                <button 
-                    class="btn btn-outline-secondary btn-sm refresh-btn" 
-                    @click="handleRefresh"
-                    :disabled="isRefreshing"
-                    title="Refresh PGN data"
-                >
-                    <span v-if="!isRefreshing" class="material-icons">refresh</span>
+                <div class="d-flex align-items-center justify-content-middle refresh-btn outline" @click="handleRefresh" :disabled="isRefreshing"
+                    title="Refresh PGN data">
+                    <span v-if="!isRefreshing" class="material-icons flex-item">refresh</span>
                     <span v-else class="spinner-border spinner-border-sm"></span>
-                </button>
+                </div>
             </div>
         </div>
 
@@ -26,8 +22,7 @@
             <div v-if="isVisible" class="d-flex flex-row flex-wrap event-body">
 
                 <template v-if="isLoading">
-                    <EventGameSkeleton v-for="i in 3"
-                        :key="`skeleton-${i}`" />
+                    <EventGameSkeleton v-for="i in 3" :key="`skeleton-${i}`" />
                 </template>
 
                 <template v-else>
@@ -37,11 +32,11 @@
 
             </div>
         </transition>
-        <span v-if="isVisible && (pgnListToRender.length < pgnList.length) && !isLoading" class="material-icons-outlined"
-            id="load-more" @click="loadMore" title="Show more">
+        <span v-if="isVisible && (pgnListToRender.length < pgnList.length) && !isLoading"
+            class="material-icons-outlined" id="load-more" @click="loadMore" title="Show more">
             add
         </span>
-        
+
     </div>
 </template>
 
@@ -72,9 +67,9 @@ function add5() {
             pgnListToRender.value.push(...nextBatch)
         }
         isLoading.value = false
-        
+
     }, 100)
-    
+
 }
 
 // Watch for changes to pgnList with debouncing
@@ -97,7 +92,7 @@ const toggleVisibility = async () => {
 
     if (isVisible.value) {
         // Reset the loading state and start fetching data again
-       add5()
+        add5()
     }
     else {
         pgnListToRender.value = []
@@ -142,12 +137,16 @@ onMounted(() => {
     border-color: #aaa23a;
     color: #aaa23a;
     background-color: transparent;
+    border-radius: 50%;
+    padding: .5em;
+    border: 1px solid #aaa23a;
 }
 
 .refresh-btn:hover {
     background-color: #aaa23a;
     color: white;
     border-color: #aaa23a;
+    transition: .5s;
 }
 
 .refresh-btn:disabled {
@@ -163,6 +162,7 @@ onMounted(() => {
     background-color: #1c1c1c;
     border: 1px solid #333;
     border-radius: 10px;
+    overflow: hidden;
 }
 
 .event-header {
@@ -174,6 +174,7 @@ onMounted(() => {
     background-color: #232323;
     border-bottom: 1px solid #333;
     transition: background 0.2s;
+    overflow: hidden;
 }
 
 .event-header:hover {
