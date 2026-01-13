@@ -45,13 +45,9 @@
 
     <!-- Evaluation details -->
     <div v-if="evaluation && enabled" class="evaluation-details">
-      <!-- <div class="best-move">
-        <span class="label">Best:</span> 
-        <span class="move">{{ evaluation.move }}</span>
-      </div> -->
-      <!-- <div v-if="evaluation.winprob !== null" class="win-probability">
-        Win: {{ Math.round(evaluation.winprob * 10) }}%
-      </div> -->
+      <div v-if="winProbability !== null" class="win-probability">
+        Win: {{ winProbability }}%
+      </div>
     </div>
 
     <!-- Error display -->
@@ -105,6 +101,7 @@ const error = ref(null)
 const evaluationSideToMove = ref(true) // Store whose turn it was when evaluation was calculated
 const lastValidPercentage = ref(50) // Store the last valid percentage to avoid flipping during loading
 const isErrorTooltipVisible = ref(false)
+const winProbability = ref(null)
 
 // Helper function to determine whose turn it is from FEN
 const isWhiteToMove = computed(() => {
@@ -125,9 +122,8 @@ const evaluationPercentage = computed(() => {
   let score = 0
   
   if (evaluation.value.mate !== null) {
-    // Mate situation - set to extreme values
+    // Mate situation - extreme values
     let mateValue = evaluation.value.mate
-    // If it was black to move when evaluation was calculated, flip the mate value to show from white's perspective
     if (!evaluationSideToMove.value) {
       mateValue = -mateValue
     }
@@ -138,27 +134,36 @@ const evaluationPercentage = computed(() => {
       return 0 // Black mate - black advantage
     }
   } else if (evaluation.value.score !== null) {
-    // Regular evaluation in centipawns
+    // Use WDL model to compute win probability
     score = evaluation.value.score
-    // If it was black to move when evaluation was calculated, flip the score to show from white's perspective
     if (!evaluationSideToMove.value) {
       score = -score
+    }
+    
+    // Calculate win probability using WDL model
+    try {
+      const { win, draw } = calculateWDL(score, evaluation.value.fen || props.fen)
+      const win_probability = Math.floor((2 * win + draw) / 20.0 + 0.5)
+      winProbability.value = win_probability
+      return Math.max(5, Math.min(95, win_probability))
+    } catch (err) {
+      console.warn('WDL calculation failed, falling back to score display:', err)
+      winProbability.value = null
+      // Fallback to traditional evaluation
+      const normalizedScore = Math.max(-1000, Math.min(1000, score))
+      return Math.max(5, Math.min(95, 50 + (normalizedScore / 20)))
     }
   } else if (evaluation.value.winprob !== null) {
     // Use win probability if available
     let winProb = evaluation.value.winprob
-    // If it was black to move when evaluation was calculated, flip the win probability to show from white's perspective
     if (!evaluationSideToMove.value) {
       winProb = 1.0 - winProb
     }
-    return winProb * 100
+    winProbability.value = Math.round(winProb * 100)
+    return winProbability.value
   }
   
-  // Convert centipawn evaluation to percentage
-  // Use a sigmoid-like function to map scores to 0-100 range
-  // Score of 0 = 50%, positive scores favor white, negative favor black
-  const normalizedScore = Math.max(-1000, Math.min(1000, score))
-  return Math.max(5, Math.min(95, 50 + (normalizedScore / 20))) // Clamp between 5-95% for visibility
+  return 50
 })
 
 // Always show evaluation from White's POV, regardless of board orientation
@@ -170,6 +175,43 @@ const blackPercentage = computed(() => 100 - whitePercentage.value)
 
 const lastValidEvaluation = ref('')
 
+// JS implementation of the Python WDLCalculator (uses only FEN and score)
+const as_coeff = [-13.50030198, 40.92780883, -36.82753545, 386.83004070]
+const bs_coeff = [96.53354896, -165.79058388, 90.89679019, 49.29561889]
+
+function parseMaterialFromFen(fen) {
+  // fen piece placement is the first field
+  const parts = fen.split(' ')
+  if (!parts || parts.length === 0) return 0
+  const placement = parts[0]
+  // Count pieces (both colors). Uppercase = white, lowercase = black.
+  let counts = { p:0, n:0, b:0, r:0, q:0 }
+  for (const ch of placement) {
+    const lower = ch.toLowerCase()
+    if (counts.hasOwnProperty(lower)) counts[lower]++
+  }
+  // material: pawns*1 + knights*3 + bishops*3 + rooks*5 + queens*9
+  return counts['p'] * 1 + counts['n'] * 3 + counts['b'] * 3 + counts['r'] * 5 + counts['q'] * 9
+}
+
+function winRateParams(material) {
+  const m = Math.max(17, Math.min(78, material)) / 58.0
+  const a = ((as_coeff[0] * m + as_coeff[1]) * m + as_coeff[2]) * m + as_coeff[3]
+  const b = ((bs_coeff[0] * m + bs_coeff[1]) * m + bs_coeff[2]) * m + bs_coeff[3]
+  return {a,b}
+}
+
+function calculateWDL(score, fen) {
+  // score in centipawns
+  const material = parseMaterialFromFen(fen)
+  const score_clamped = Math.max(-4000, Math.min(4000, score))
+  const {a,b} = winRateParams(material)
+  const win = 1000.0 / (1.0 + Math.exp((a - score_clamped) / b))
+  const loss = 1000.0 / (1.0 + Math.exp((a - (-score_clamped)) / b))
+  const draw = 1000.0 - win - loss
+  return { win: Math.round(win), draw: Math.round(draw), loss: Math.round(loss) }
+}
+
 const formatEvaluation = () => {
   // If we're loading a new evaluation, keep showing the previous evaluation text unchanged
   if (loading.value && evaluation.value) {
@@ -180,7 +222,6 @@ const formatEvaluation = () => {
   
   if (evaluation.value.mate !== null) {
     let mateValue = evaluation.value.mate
-    // If it was black to move when evaluation was calculated, flip the mate value to show from white's perspective
     if (!evaluationSideToMove.value) {
       mateValue = -mateValue
     }
@@ -188,13 +229,21 @@ const formatEvaluation = () => {
     return `M${mateSign}${mateValue}`
   } else if (evaluation.value.score !== null) {
     let score = evaluation.value.score
-    // If it was black to move when evaluation was calculated, flip the score to show from white's perspective
     if (!evaluationSideToMove.value) {
       score = -score
     }
-    const scoreInPawns = score / 100 // Convert centipawns to pawns
-    const sign = scoreInPawns >= 0 ? '+' : ''
-    return `${sign}${scoreInPawns.toFixed(1)}`
+    
+    // Try to use WDL-based evaluation text
+    try {
+      const { win, draw } = calculateWDL(score, evaluation.value.fen || props.fen)
+      const win_probability = Math.floor((2 * win + draw) / 20.0 + 0.5)
+      return `${win_probability}%`
+    } catch (err) {
+      // Fallback to traditional score display
+      const scoreInPawns = score / 100
+      const sign = scoreInPawns >= 0 ? '+' : ''
+      return `${sign}${scoreInPawns.toFixed(1)}`
+    }
   }
   
   return ''
@@ -204,6 +253,7 @@ const fetchEvaluation = async () => {
   if (!props.fen || !props.enabled) {
     evaluation.value = null
     evaluationSideToMove.value = true
+    winProbability.value = null
     // Emit null evaluation and stop loading
     emit('evaluation-update', {
       bestMove: null,
@@ -218,6 +268,7 @@ const fetchEvaluation = async () => {
   try {
     loading.value = true
     error.value = null
+    winProbability.value = null
     
     // Emit loading state
     emit('loading-update', true)
@@ -228,7 +279,6 @@ const fetchEvaluation = async () => {
     const result = await EvaluationService.fetchEvaluation(props.fen, props.depth, props.showLines)
 
     if (result.fen === props.fen){
-      console.log('Evaluation:', result)
       evaluation.value = result
       
       // Emit evaluation data
@@ -245,6 +295,7 @@ const fetchEvaluation = async () => {
     error.value = 'Failed to get evaluation'
     evaluation.value = null
     evaluationSideToMove.value = true
+    winProbability.value = null
     // Emit null evaluation on error
     emit('evaluation-update', {
       bestMove: null,
@@ -273,9 +324,8 @@ watch(() => props.boardOrientation, () => {
 // Watch for evaluation changes to update the last valid percentage
 watch([evaluation, loading], ([newEval, isLoading]) => {
   if (newEval && !isLoading) {
-    // Update the last valid percentage when we have a new evaluation and we're not loading
     let score = 0
-    
+
     if (newEval.mate !== null) {
       let mateValue = newEval.mate
       if (!evaluationSideToMove.value) {
@@ -284,23 +334,38 @@ watch([evaluation, loading], ([newEval, isLoading]) => {
       lastValidPercentage.value = mateValue > 0 ? 100 : 0
       const mateSign = mateValue >= 0 ? '+' : ''
       lastValidEvaluation.value = `M${mateSign}${mateValue}`
+      winProbability.value = mateValue > 0 ? 100 : 0
     } else if (newEval.score !== null) {
       score = newEval.score
       if (!evaluationSideToMove.value) {
         score = -score
       }
-      const normalizedScore = Math.max(-1000, Math.min(1000, score))
-      lastValidPercentage.value = Math.max(5, Math.min(95, 50 + (normalizedScore / 20)))
-      const scoreInPawns = score / 100
-      const sign = scoreInPawns >= 0 ? '+' : ''
-      lastValidEvaluation.value = `${sign}${scoreInPawns.toFixed(1)}`
+      
+      const fenToUse = newEval.fen || props.fen || ''
+      try {
+        const { win, draw } = calculateWDL(score, fenToUse)
+        let win_probability = Math.floor((2 * win + draw) / 20.0 + 0.5)
+        lastValidPercentage.value = Math.max(5, Math.min(95, win_probability))
+        lastValidEvaluation.value = `${win_probability}%`
+        winProbability.value = win_probability
+      } catch (err) {
+        const normalizedScore = Math.max(-1000, Math.min(1000, score))
+        lastValidPercentage.value = Math.max(5, Math.min(95, 50 + (normalizedScore / 20)))
+        const scoreInPawns = score / 100
+        const sign = scoreInPawns >= 0 ? '+' : ''
+        lastValidEvaluation.value = `${sign}${scoreInPawns.toFixed(1)}`
+        winProbability.value = null
+        console.warn('WDL calculation failed, falling back to score display:', err)
+      }
     } else if (newEval.winprob !== null) {
       let winProb = newEval.winprob
       if (!evaluationSideToMove.value) {
         winProb = 1.0 - winProb
       }
-      lastValidPercentage.value = winProb * 100
-      lastValidEvaluation.value = '' // Win probability doesn't show in the text
+      const winPct = Math.round(winProb * 100)
+      lastValidPercentage.value = winPct
+      lastValidEvaluation.value = `${winPct}%`
+      winProbability.value = winPct
     }
   }
 })
@@ -309,8 +374,8 @@ watch([evaluation, loading], ([newEval, isLoading]) => {
 <style scoped>
 /* styles */
 .error-container {
-  position: relative;      /* important */
-  display: inline-block;   /* so hover works neatly around the icon */
+  position: relative;
+  display: inline-block;
 }
 
 .error-tooltip {
@@ -318,11 +383,11 @@ watch([evaluation, loading], ([newEval, isLoading]) => {
   opacity: 0;
   transition: opacity 0.2s ease;
   position: absolute;
-  z-index: 9999;           /* sit above surrounding UI */
+  z-index: 9999;
   bottom: 125%;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #ff4444; /* avoid mixing with .bg-danger while testing */
+  background-color: #ff4444;
   color: #fff;
   padding: 8px 10px;
   border-radius: 4px;
@@ -343,7 +408,6 @@ watch([evaluation, loading], ([newEval, isLoading]) => {
   visibility: visible;
   opacity: 1;
 }
-
 
 .evaluation-container {
   display: flex;
@@ -462,19 +526,6 @@ watch([evaluation, loading], ([newEval, isLoading]) => {
   text-align: center;
   font-size: 12px;
   color: #f2f2f2;
-}
-
-.best-move {
-  margin-bottom: 5px;
-}
-
-.label {
-  color: #aaa;
-}
-
-.move {
-  font-weight: bold;
-  color: #cdd26a;
 }
 
 .win-probability {
