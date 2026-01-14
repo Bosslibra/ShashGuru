@@ -387,7 +387,7 @@ onMounted(async () => {
 
         <!-- AI PC Status Indicator -->
         <div class="ai-pc-status text-center mb-2">
-            <div v-if="checkingLocalBackend" class="d-flex justify-content-center align-items-center gap-2">
+            <div v-if="checkingLocalBackend" class="d-flex justify-content-center align-items-center gap-2 ">
                 <span class="spinner-border spinner-border-sm text-warning" role="status" aria-hidden="true"></span>
                 <small class="text-warning">Checking local AI PC...</small>
             </div>
@@ -413,8 +413,8 @@ onMounted(async () => {
         <div class="flex-shrink-0">
             <div v-if="toAnalyse" class="flex-item">
                 <!-- Style Selector and Analyze Button - Horizontally Spaced -->
-                <div class="d-flex justify-content-center align-items-center gap-3 mb-3">
-                    <div class="d-flex flex-column align-items-center">
+                <div class="row justify-content-center align-items-center gap-3 mb-3">
+                    <div class="col-3 d-flex flex-column align-items-center">
                         <label for="style-selector" class="style-label mb-1">Analysis Style</label>
                         <select id="style-selector" 
                                 v-model="selectedStyle" 
@@ -429,10 +429,11 @@ onMounted(async () => {
                     </div>
                     
                     <button type="button"
-                        class="btn btn-sm fs-4 text-black rounded rounded-4 custom-bg-primary px-5 py-3 fw-bold"
+                        class="col-3 btn btn-sm fs-4 text-black text-center rounded rounded-4 custom-bg-primary py-3 fw-bold"
                         @click="startAnalysisSTREAMED">
                         Analyze
                     </button>
+                    <div class="col-3"></div>
                 </div>
             </div>
             <input v-model="userInput" v-else @keyup.enter="sendMessageSTREAMED" id="input"
@@ -527,8 +528,11 @@ h6 {
 }
 
 .ai-pc-status {
-    border-bottom: 1px solid #3a3a3a;
     padding-bottom: 8px;
+}
+.ai-pc-status > * {
+    border-top: 1px solid #3a3a3a;
+    
 }
 
 .status-indicator {
@@ -579,7 +583,7 @@ h6 {
 .style-selector {
     background-color: #2e2e2e;
     border: 2px solid #aaa23a;
-    color: #fff;
+    color: #eee;
     border-radius: 8px;
     padding: 8px 12px;
     min-width: 150px;

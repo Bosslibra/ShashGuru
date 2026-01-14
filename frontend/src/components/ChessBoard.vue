@@ -8,6 +8,8 @@ import EvaluationSettings from './EvaluationSettings.vue'
 import { DEFAULT_DEPTH, DEFAULT_SHOW_LINES, DEFAULT_EVALUATION_ENABLED, DEFAULT_SHOW_BEST_MOVE } from '@/constants/evaluation.js'
 import { useChessStore } from '@/stores/useChessStore'; // TODO: Refactor to only use pinia store for PGN management
 import { storeToRefs } from 'pinia';
+import DGTButton from './DGTButton.vue';
+
 
 const chessStore = useChessStore();
 const currentPGN = storeToRefs(chessStore).currentPGN;
@@ -46,6 +48,19 @@ const engineEvaluation = ref({
 
 // Settings modal
 const showSettings = ref(false);
+
+//DGT
+
+
+function onDgtFenUpdate(newFen) {
+  console.log("DGT FEN:", newFen)
+  if (newFen && newFen !== fen.value) {
+    fen.value = newFen;
+    boardAPI.value?.setPosition(newFen);
+    emit("updateFen", newFen); // optionally re-emit to parent if needed
+  }
+}
+
 
 const boardConfig = reactive({
   fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // Starting FEN
@@ -251,7 +266,7 @@ function handlePGN() {
 
 // Initialize chessboard height on mount
 onMounted(() => {
-  console.log("STORE PGN",chessStore.currentPGN);
+  console.log("STORE PGN", chessStore.currentPGN);
   pgn.value = chessStore.currentPGN || null;
   if (pgn.value) {
     handlePGN();
@@ -288,7 +303,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="chessboard-container" >
+  <div class="chessboard-container">
     <div class="board-section w-100">
       <div class="d-flex">
         <section role="region" aria-label="Board Controls" class="board-controls">
@@ -301,6 +316,7 @@ onUnmounted(() => {
           <button type="button" @click="showSettings = !showSettings" class="btn btn-sm m-1">
             Settings
           </button>
+          <DGTButton @update:fen="onDgtFenUpdate" type="button" class="btn btn-sm m-1"></DGTButton>
         </section>
         <div v-if="side === 'w'" class="text-white p-2">White to play</div>
         <div v-else-if="side === 'b'" class="text-white p-2">Black to play</div>

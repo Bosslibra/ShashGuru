@@ -8,11 +8,20 @@ const pgnListFeatured = ref([])
 const pgnListAsked = ref([])
 const loading = ref(false)
 const error = ref(null)
-const featuredEvent = ref(null)
+const featuredEvents = ref([])
 const isFeatureVisibile = ref(true)
 const isQueriedVisibile = ref(true)
 const searchHasHappened = ref(false)
 const searchInput = ref('')
+
+// Array of featured event IDs - you can fill this with your desired events
+const featuredEventIds = ref([
+  'oemUVIXV', // Event ID 1
+  'xhgVlH1K', // Event ID 2
+  'iU2d617d', // Event ID 3
+  'egBJefRk', // Event ID 4
+  'WO5eIaW5', // Event ID 5
+])
 
 // Add refresh functions for each event section
 async function refreshQueriedEvent() {
@@ -24,10 +33,8 @@ async function refreshQueriedEvent() {
   }
 }
 
-async function refreshFeaturedEvent() {
-  if (featuredEvent.value) {
-    await fetchPgnFeatured()
-  }
+async function refreshFeaturedEvents() {
+  await fetchPgnFeatured()
 }
 
 // Fetch tournament info and list of rounds
@@ -72,10 +79,26 @@ async function fetchQueriedPgn() {
 }
 
 async function fetchPgnFeatured() {
-  if (!featuredEvent.value) return
-  const pgnFeatured = await fetchPgn(featuredEvent.value)
-  if (pgnFeatured !== null) {
-    pgnListFeatured.value = splitPGNs(pgnFeatured)
+  featuredEvents.value = []
+  let index = 1;
+  for (const eventId of featuredEventIds.value) {
+    try {
+      const pgnFeatured = await fetchPgn(eventId)
+      if (pgnFeatured !== null) {
+        const pgnList = splitPGNs(pgnFeatured)
+        if (pgnList.length > 0) {
+          const eventTitle = `Round ${index}`
+          featuredEvents.value.push({
+            id: eventId,
+            title: eventTitle,
+            pgnList: pgnList
+          })
+        }
+      }
+      index++;
+    } catch (err) {
+      console.error(`Error fetching event ${eventId}:`, err)
+    }
   }
 }
 
@@ -117,21 +140,15 @@ function setFromUrl(url) {
   }
 }
 
-const featuredEventTitle = computed(() => {
-  if (!pgnListFeatured.value.length) return 'Loading Event Title...'
-  const match = pgnListFeatured.value[0].match(/\[Event "(.*?)"\]/)
-  return match ? match[1] : 'Event Name Unknown'
-})
 
 const queriedEventTitle = computed(() => {
   if (!pgnListAsked.value.length) return 'Loading Event Title...'
-  const match = pgnListAsked.value[0].match(/\[Event "(.*?)"\]/)
+  const match = pgnListAsked.value[0].match(/\[BroadcastName "(.*?)"\]/)
   return match ? match[1] : 'Event Name Unknown'
 })
 
 onMounted(() => {
-  // Automatically fetch event info on mount
-  featuredEvent.value = import.meta.env.FEATURED_EVENT_ID || 'bFcndX91' // Test featured event ID, should be null in production
+  // Automatically fetch featured events on mount
   fetchPgnFeatured();
   //fetchTopEvents();
 })
@@ -175,10 +192,16 @@ onMounted(() => {
     :pgnList="pgnListAsked" :shouldRender="searchHasHappened" :onRefresh="refreshQueriedEvent" initiallyOpen id="queried-results" />
 
 
-  <div v-if="featuredEvent" class="fs-3 ms-5 m-4">Featured Event</div>
-  <!-- Featured Event -->
-  <EventSection v-if="featuredEvent" :title="featuredEventTitle || 'Featured Event'" :pgnList="pgnListFeatured"
-    :shouldRender="isFeatureVisibile" :onRefresh="refreshFeaturedEvent" initiallyOpen />
+  <div v-if="featuredEvents.length > 0" class="fs-3 ms-5 m-4">Alma Mater Chess Tournament 2025</div>
+  <!-- Featured Events -->
+  <div v-for="event in featuredEvents" :key="event.id">
+    <EventSection 
+      :title="event.title" 
+      :pgnList="event.pgnList"
+      :shouldRender="isFeatureVisibile" 
+      :onRefresh="refreshFeaturedEvents" 
+    />
+  </div>
 
   <footer class="mb-5"></footer>
 </template>
@@ -207,5 +230,8 @@ onMounted(() => {
   background-color: #aaa23a !important;
   border: 1px solid #aaa23a !important;
   color: white;
+}
+#search-button:hover {
+  background-color: #9a9435 !important;
 }
 </style>
