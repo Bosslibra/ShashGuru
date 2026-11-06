@@ -132,6 +132,10 @@ cd frontend
 VITE_AUTH_PROVIDER=dev npm run dev     # sign in with any e-mail; the dev token is "dev:<subject>:<email>"
 ```
 
+To try the *containers* locally (Postgres + migrations + Caddy, fake login, no payments), use `docker-compose.local.yml`:
+set `KEY_ENCRYPTION_KEYS`, run `docker compose -f docker-compose.local.yml up -d --build`, open http://localhost:8080.
+It uses its own project name (`shashguru-local`), so it does not touch the other compose stacks.
+
 ## Production
 
 ```

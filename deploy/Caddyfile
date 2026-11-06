@@ -14,7 +14,9 @@
 
 	# Operational endpoints are never reachable from the internet.
 	@internal path /backend/metrics /backend/health /backend/docs /backend/redoc /backend/openapi.json
-	respond @internal 404
+	handle @internal {
+		respond 404
+	}
 
 	# NDJSON streams must not be buffered; webhooks need the original body untouched.
 	handle_path /backend/* {

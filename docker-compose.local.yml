@@ -1,0 +1,70 @@
+# Local test of the SaaS stack, with fake login (dev auth) and no payment provider.
+# Same containers as production (Postgres + migrations, Redis, Caddy) but plain HTTP on :8080.
+#
+#   $env:KEY_ENCRYPTION_KEYS = "v1:" + (python -c "from app.services.crypto import generate_key; print(generate_key())")   # from backend/
+#   docker compose -f docker-compose.local.yml up -d --build
+#   -> http://localhost:8080   (sign in with any e-mail)
+#
+# The project name keeps it separate from the other compose stacks in this repository.
+name: shashguru-local
+
+services:
+  caddy:
+    image: caddy:2
+    ports:
+      - "8080:80"
+    environment:
+      SITE_ADDRESS: ":80"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on: [frontend, backend]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_AUTH_PROVIDER: dev
+    volumes:
+      - ./config/nginx.spa.conf:/etc/nginx/nginx.conf:ro
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DEPLOYMENT_MODE: saas
+      AUTH_PROVIDER: dev
+      ALLOW_DEV_AUTH: "true"
+      AUTH_ADMIN_SUBJECTS: ${AUTH_ADMIN_SUBJECTS:-}
+      TRUST_PROXY: "true"
+      PUBLIC_URL: http://localhost:8080
+      CORS_ORIGINS: http://localhost:8080
+      REDIS_HOST: redis
+      DATABASE_URL: postgresql+asyncpg://shashguru:local@postgres:5432/shashguru
+      KEY_ENCRYPTION_KEYS: ${KEY_ENCRYPTION_KEYS:?generate one, see the header of this file}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ENGINE_POOL_SIZE: "2"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: shashguru
+      POSTGRES_PASSWORD: local
+      POSTGRES_DB: shashguru
+    volumes:
+      - pg_local:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shashguru"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+
+volumes:
+  pg_local:

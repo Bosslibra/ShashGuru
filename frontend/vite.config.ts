@@ -17,7 +17,7 @@ export default defineConfig({
     // Same mapping nginx does in production: /backend/* -> backend:5000/*
     proxy: {
       '/backend': {
-        target: 'http://localhost:5000',
+        target: process.env.BACKEND_URL ?? 'http://localhost:5000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/backend/, ''),
       },
