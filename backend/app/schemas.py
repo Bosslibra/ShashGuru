@@ -101,7 +101,20 @@ class StyleInfo(BaseModel):
     label: str
 
 
-class AnalysisRequest(BaseModel):
+Source = Literal["managed", "byok"]
+MAX_CHAT_MESSAGES = 40  # the history is trimmed again to the most recent turns before it reaches the LLM
+MAX_USER_CHARS = 2000  # what a person types
+MAX_ASSISTANT_CHARS = 8000  # earlier answers sent back as history (completions are capped at ~1k tokens)
+
+
+class LLMTarget(BaseModel):
+    """Which LLM answers: the platform's models (billed in credits) or one of the user's own keys."""
+    source: Source = "managed"
+    key_id: Optional[int] = None
+    model: Optional[str] = Field(None, max_length=128)
+
+
+class AnalysisRequest(LLMTarget):
     fen: str
     depth: int = Field(20, ge=1, le=40)
     style: str = "default"
@@ -113,9 +126,17 @@ class ChatMessage(BaseModel):
     role: Literal["user", "assistant"]
     content: str
 
+    @model_validator(mode="after")
+    def _limit_length(self):
+        limit = MAX_USER_CHARS if self.role == "user" else MAX_ASSISTANT_CHARS
+        if len(self.content) > limit:
+            raise ValueError(f"A {self.role} message can have at most {limit} characters")
+        return self
 
-class ChatRequest(BaseModel):
-    messages: list[ChatMessage] = Field(min_length=1)
+
+class ChatRequest(LLMTarget):
+    analysis_id: str = Field(min_length=8, max_length=64)
+    messages: list[ChatMessage] = Field(min_length=1, max_length=MAX_CHAT_MESSAGES)
     style: str = "default"
 
     @model_validator(mode="after")
@@ -123,6 +144,19 @@ class ChatRequest(BaseModel):
         if self.messages[-1].role != "user":
             raise ValueError("The last message must have role 'user'")
         return self
+
+
+# ------------------------------------------------------------------ keys ----
+
+class KeyCreate(BaseModel):
+    provider: Literal["openai", "anthropic", "openrouter", "custom"]
+    api_key: str = Field(min_length=8, max_length=512)
+    label: str = Field("", max_length=80)
+    base_url: Optional[str] = Field(None, max_length=512)
+
+
+class CheckoutRequestBody(BaseModel):
+    offer_id: str = Field(max_length=64)
 
 
 # ----------------------------------------------------------------- admin ----

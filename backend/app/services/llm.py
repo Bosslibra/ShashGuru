@@ -1,18 +1,15 @@
 # This file is part of ShashGuru. Copyright (C) 2025 Alessandro Libralesso.
 # Licensed under the GNU GPL v3 or later, see COPYING.
 import logging
-from typing import Any, AsyncIterator, Optional
+from typing import Any, Optional
 
 import chess
-from openai import AsyncOpenAI
 
-from app.config import Settings
 from app.services.fen_explainer import fen_explainer
 
 log = logging.getLogger(__name__)
 
 MAX_HISTORY = 10
-MAX_COMPLETION_TOKENS = 1024
 
 SYSTEM_MESSAGES = {
     'default': '''
@@ -186,11 +183,7 @@ def create_analysis_prompt(fen: str, engine_lines: list[dict[str, Any]], style: 
     return _default_prompt(fen_text, side, context, moves[0])
 
 
-# -------------------------------------------------------------- streaming ---
-
-def create_client(settings: Settings) -> AsyncOpenAI:
-    return AsyncOpenAI(base_url=settings.ai_base_url, api_key="unused")
-
+# --------------------------------------------------------------- messages ---
 
 def build_messages(prompt: str, history: Optional[list[dict[str, str]]], style: str) -> list[dict[str, str]]:
     """System message + trimmed history + the new user prompt.
@@ -202,26 +195,3 @@ def build_messages(prompt: str, history: Optional[list[dict[str, str]]], style: 
         history = history[:1] + history[-(MAX_HISTORY - 1):]
     system = SYSTEM_MESSAGES.get(style, SYSTEM_MESSAGES['default'])
     return [{"role": "system", "content": system}, *history, {"role": "user", "content": prompt}]
-
-
-async def stream_completion(
-    client: AsyncOpenAI,
-    model: str,
-    prompt: str,
-    history: Optional[list[dict[str, str]]] = None,
-    style: str = 'default',
-) -> AsyncIterator[str]:
-    stream = await client.chat.completions.create(
-        model=model,
-        messages=build_messages(prompt, history, style),
-        stream=True,
-        max_completion_tokens=MAX_COMPLETION_TOKENS,
-        temperature=0.0,
-    )
-    async for chunk in stream:
-        if not chunk.choices:
-            continue
-        # Do not stop at finish_reason: the last chunk may still carry text.
-        delta = chunk.choices[0].delta.content
-        if delta:
-            yield delta

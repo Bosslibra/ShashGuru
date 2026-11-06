@@ -4,7 +4,8 @@
     "live": "LIVE",
     "about": "INFO",
     "toggle": "Apri/chiudi menu",
-    "language": "Lingua"
+    "language": "Lingua",
+    "pricing": "PIANI"
   },
   "common": {
     "close": "Chiudi",
@@ -13,7 +14,8 @@
     "on": "ON",
     "off": "OFF",
     "white": "Bianco",
-    "black": "Nero"
+    "black": "Nero",
+    "cancel": "Annulla"
   },
   "errors": {
     "invalidPgn": "Il PGN non è valido o è vuoto.",
@@ -141,7 +143,39 @@
     "introTitle": "Chiedi all'AI di questa posizione",
     "intro": "Scegli uno stile di analisi e premi Analizza per avere un commento sulla posizione attuale. Poi potrai fare altre domande.",
     "backendRemote": "AI nel cloud",
-    "send": "Invia"
+    "send": "Invia",
+    "source": "Paga con",
+    "sourceManaged": "Crediti ShashGuru",
+    "sourceByok": "La mia chiave API",
+    "model": "Modello",
+    "modelPlaceholder": "Nome del modello",
+    "key": "Chiave API",
+    "creditsUnit": "cr",
+    "noKey": "Non hai ancora salvato nessuna chiave API.",
+    "addKey": "Aggiungila nel tuo account",
+    "signInToAnalyze": "Accedi per ottenere l'analisi AI.",
+    "analyzeAgain": "Analizza di nuovo",
+    "balance": "Saldo: {{count}} crediti",
+    "lastCost": "ultima risposta: {{count}} crediti",
+    "errors": {
+      "auth": {
+        "title": "Accesso richiesto",
+        "text": "Accedi per usare l'analisi AI."
+      },
+      "credits": {
+        "title": "Crediti insufficienti",
+        "text": "Hai esaurito i crediti. Acquista altri crediti o abbonati, oppure usa la tua chiave API.",
+        "cta": "Vedi i piani"
+      },
+      "expired": {
+        "title": "Analisi scaduta",
+        "text": "Questa analisi non è più disponibile sul server. Eseguila di nuovo per continuare a fare domande."
+      },
+      "rateLimit": {
+        "title": "Troppe richieste",
+        "text": "Stai inviando richieste troppo velocemente. Attendi un momento e riprova."
+      }
+    }
   },
   "live": {
     "title": "Eventi e trasmissioni",
@@ -164,6 +198,193 @@
     "copyright": "© 2025 Alessandro Libralesso",
     "license": "ShashGuru è software libero: puoi ridistribuirlo e/o modificarlo secondo i termini della <strong>GNU General Public License</strong> come pubblicata dalla Free Software Foundation, nella versione 3 della licenza o (a tua scelta) in una versione successiva.",
     "warranty": "ShashGuru è distribuito nella speranza che sia utile, ma <strong>SENZA ALCUNA GARANZIA</strong>; senza nemmeno la garanzia implicita di <em>COMMERCIABILITÀ</em> o <em>IDONEITÀ A UNO SCOPO PARTICOLARE</em>. Consulta la GNU General Public License per maggiori dettagli.",
-    "copy": "Dovresti aver ricevuto una copia della GNU General Public License insieme a questo programma. In caso contrario, vedi"
+    "copy": "Dovresti aver ricevuto una copia della GNU General Public License insieme a questo programma. In caso contrario, vedi",
+    "source": "Codice sorgente (GPLv3)",
+    "engines": "Motori scacchistici: Alexander e ShashChess, con licenza GNU GPL v3."
+  },
+  "auth": {
+    "signIn": "Accedi",
+    "signUp": "Registrati",
+    "signOut": "Esci",
+    "account": "Account",
+    "manageLogin": "Impostazioni di accesso",
+    "credits": "{{count}} crediti",
+    "creditsTitle": "Il tuo saldo crediti",
+    "signInToContinue": "Accedi per continuare"
+  },
+  "keys": {
+    "title": "Chiavi API",
+    "subtitle": "Usa le tue chiavi: paghi direttamente il provider e non consumi crediti.",
+    "intro": "Aggiungi la tua chiave API per eseguire le analisi a tuo carico. Le chiavi vengono verificate al salvataggio.",
+    "empty": "Nessuna chiave API salvata.",
+    "add": "Aggiungi una chiave",
+    "provider": "Provider",
+    "label": "Etichetta (facoltativa)",
+    "labelPlaceholder": "es. Personale",
+    "apiKey": "Chiave API",
+    "baseUrl": "URL base",
+    "baseUrlHint": "Un endpoint HTTPS compatibile con l'API OpenAI. Gli indirizzi di rete privata non sono ammessi.",
+    "storedEncrypted": "Le chiavi sono salvate cifrate sui nostri server e non vengono più mostrate.",
+    "save": "Salva la chiave",
+    "saved": "Chiave salvata",
+    "failed": "Impossibile completare l'operazione.",
+    "test": "Prova",
+    "testOk": "La chiave funziona.",
+    "testFailed": "La chiave è stata rifiutata.",
+    "delete": "Elimina la chiave",
+    "never": "mai",
+    "lastUsed": "ultimo uso: {{date}}",
+    "providers": {
+      "openai": "OpenAI",
+      "anthropic": "Anthropic (Claude)",
+      "openrouter": "OpenRouter",
+      "custom": "Compatibile OpenAI"
+    }
+  },
+  "pricing": {
+    "title": "Piani e crediti",
+    "subtitle": "Il motore è gratuito. Paghi solo il commento AI, con i crediti o con la tua chiave API.",
+    "free": {
+      "title": "Gratuito",
+      "text": "Per il motore non serve un account.",
+      "engine": "Analisi e valutazione del motore",
+      "board": "Scacchiera, PGN e dirette"
+    },
+    "byok": {
+      "title": "Porta la tua chiave",
+      "text": "Collega OpenAI, Anthropic, OpenRouter o qualsiasi endpoint compatibile.",
+      "cta": "Aggiungi la tua chiave"
+    },
+    "subscriptions": "Abbonamenti",
+    "topups": "Pacchetti di crediti",
+    "topupsText": "Pacchetti una tantum che non scadono.",
+    "month": "mese",
+    "current": "Piano attuale",
+    "creditsPerMonth": "{{count}} crediti / mese",
+    "credits": "{{count}} crediti",
+    "subscribe": "Abbonati",
+    "buy": "Acquista",
+    "checkoutFailed": "Impossibile avviare il pagamento.",
+    "paymentSuccess": "Pagamento ricevuto. I crediti compariranno a breve.",
+    "paymentCancelled": "Pagamento annullato.",
+    "footnote": "I prezzi includono le imposte applicabili dove indicato al pagamento. I crediti dell'abbonamento scadono a fine periodo; quelli acquistati no."
+  },
+  "account": {
+    "title": "Il tuo account",
+    "loading": "Caricamento dell'account...",
+    "plan": "Piano",
+    "planFree": "Gratuito",
+    "renews": "Si rinnova il {{date}}",
+    "creditsTotal": "Crediti disponibili",
+    "creditsSubscription": "Da abbonamento",
+    "creditsPurchased": "Acquistati",
+    "buyCredits": "Acquista crediti",
+    "manageSubscription": "Gestisci abbonamento",
+    "usageMonth": "Questo mese",
+    "requests": "Richieste",
+    "inputTokens": "Token in ingresso",
+    "outputTokens": "Token in uscita",
+    "creditsUsed": "Crediti usati",
+    "history": "Cronologia dei consumi",
+    "historyEmpty": "Nessun consumo finora.",
+    "colDate": "Data",
+    "colSource": "Pagato con",
+    "colModel": "Modello",
+    "colTokens": "Token in / out",
+    "colCredits": "Crediti",
+    "loadMore": "Carica altri",
+    "loadFailed": "Impossibile caricare i tuoi dati.",
+    "portalFailed": "Impossibile aprire il portale di fatturazione.",
+    "data": "I tuoi dati",
+    "dataText": "Scarica tutto ciò che conserviamo su di te, oppure elimina definitivamente il tuo account.",
+    "export": "Esporta i miei dati",
+    "exportFailed": "Impossibile esportare i tuoi dati.",
+    "delete": "Elimina account",
+    "deleteTitle": "Eliminare il tuo account?",
+    "deleteWord": "elimina",
+    "deleteText": "Elimina definitivamente account, chiavi API e cronologia dei consumi, e annulla eventuali abbonamenti. I crediti residui vanno persi. Scrivi \"{{word}}\" per confermare.",
+    "deleteConfirmLabel": "Parola di conferma",
+    "deleteConfirm": "Elimina definitivamente",
+    "deleted": "Il tuo account è stato eliminato.",
+    "deleteFailed": "Impossibile eliminare l'account."
+  },
+  "legal": {
+    "termsTitle": "Termini di servizio",
+    "privacyTitle": "Informativa sulla privacy",
+    "draft": "Bozza: questo testo è un modello e deve essere rivisto da un professionista legale prima della pubblicazione.",
+    "updated": "Ultimo aggiornamento: {{date}}",
+    "back": "Torna alla home",
+    "terms": {
+      "sections": [
+        {
+          "title": "1. Il servizio",
+          "body": "ShashGuru offre analisi con motore scacchistico e commenti generati da AI. La parte di motore è gratuita. Il commento AI è disponibile con crediti prepagati, con un abbonamento o con la tua chiave API."
+        },
+        {
+          "title": "2. Account",
+          "body": "Per usare il commento AI serve un account. Sei responsabile della sicurezza del tuo accesso e delle attività svolte con il tuo account."
+        },
+        {
+          "title": "3. Crediti e pagamenti",
+          "body": "I crediti si consumano in base ai token usati da ogni richiesta e al modello scelto. I crediti dell'abbonamento scadono alla fine di ogni periodo di fatturazione; quelli acquistati non scadono. I pagamenti sono gestiti da un fornitore terzo; non conserviamo i dati della tua carta."
+        },
+        {
+          "title": "4. Le tue chiavi API",
+          "body": "Se aggiungi una tua chiave, i consumi ti sono fatturati direttamente dal provider. Conserviamo la chiave cifrata e la usiamo solo per eseguire le tue richieste. Puoi eliminarla in qualsiasi momento."
+        },
+        {
+          "title": "5. Uso consentito",
+          "body": "Non abusare del servizio, non tentare di aggirare i limiti e non usarlo per inviare contenuti illeciti. Possiamo limitare o sospendere gli account che lo fanno."
+        },
+        {
+          "title": "6. Contenuti AI",
+          "body": "I commenti generati dall'AI possono contenere errori. Sono forniti solo a scopo informativo e di studio."
+        },
+        {
+          "title": "7. Rimborsi",
+          "body": "I crediti acquistati e non usati possono essere rimborsati su richiesta entro i termini previsti dalla normativa sui consumatori. Contattaci per richiederlo."
+        },
+        {
+          "title": "8. Responsabilità",
+          "body": "Il servizio è fornito così com'è, senza garanzie, nei limiti consentiti dalla legge. Il codice sorgente di ShashGuru è software libero sotto GNU GPL v3 o successiva."
+        },
+        {
+          "title": "9. Contatti",
+          "body": "Domande su questi termini: [email di contatto da aggiungere]."
+        }
+      ]
+    },
+    "privacy": {
+      "sections": [
+        {
+          "title": "1. Chi siamo",
+          "body": "Il titolare del trattamento è [denominazione e indirizzo da aggiungere]."
+        },
+        {
+          "title": "2. Dati trattati",
+          "body": "Dati dell'account (email, identificativo), posizioni e domande che invii per l'analisi, registri di consumo (modello, token, crediti) e le tue chiavi API cifrate, se le aggiungi."
+        },
+        {
+          "title": "3. Finalità",
+          "body": "Erogare il servizio, applicare crediti e limiti, prevenire abusi e adempiere a obblighi di legge (ad es. fatturazione)."
+        },
+        {
+          "title": "4. Responsabili del trattamento",
+          "body": "Usiamo terze parti per erogare il servizio: un fornitore di autenticazione, un fornitore di pagamenti e i provider di modelli AI che rispondono alle tue richieste (posizioni e domande vengono trasmesse a loro). Se usi la tua chiave, le richieste vanno al provider che hai scelto."
+        },
+        {
+          "title": "5. Cookie",
+          "body": "Usiamo solo cookie tecnici e archiviazione locale necessari per l'accesso, i pagamenti e le tue preferenze. Nessun cookie pubblicitario o di analisi."
+        },
+        {
+          "title": "6. Conservazione",
+          "body": "I dati dell'account e dei consumi sono conservati finché l'account esiste; le fatture per il tempo previsto dalla legge. I contesti delle analisi scadono automaticamente dopo poco tempo."
+        },
+        {
+          "title": "7. I tuoi diritti",
+          "body": "Puoi esportare i tuoi dati ed eliminare l'account dalla pagina Account. Puoi anche contattarci per esercitare i diritti di accesso, rettifica, cancellazione, portabilità e opposizione, o presentare reclamo al Garante per la protezione dei dati personali."
+        }
+      ]
+    }
   }
 }

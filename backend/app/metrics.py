@@ -15,6 +15,12 @@ ACTIVE_REQUESTS = Gauge("shashguru_active_requests", "Number of active requests 
 ERROR_COUNT = Counter("shashguru_errors_total", "Total number of errors by endpoint",
                       ["endpoint", "error_type"])
 
+LLM_TOKENS = Counter("shashguru_llm_tokens_total", "LLM tokens by provider, model and direction",
+                     ["provider", "model", "direction"])
+LLM_CREDITS = Counter("shashguru_credits_charged_total", "Credits charged for managed LLM calls", ["provider", "model"])
+LLM_CALLS = Counter("shashguru_llm_calls_total", "LLM calls by billing mode and outcome",
+                    ["billing", "status"])  # status: ok | error | aborted | payment_required
+
 EXCLUDED = {"/metrics", "/health"}
 
 

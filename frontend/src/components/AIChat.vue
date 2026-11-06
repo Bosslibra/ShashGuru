@@ -4,7 +4,9 @@ import { storeToRefs } from 'pinia'
 import MarkdownIt from 'markdown-it'
 import { useTranslation } from 'i18next-vue'
 import { Brain, Check, CircleAlert, Copy, RefreshCw, SendHorizontal, Sparkles } from '@lucide/vue'
+import { RouterLink } from 'vue-router'
 import IconButton from './IconButton.vue'
+import LlmSourcePicker from './LlmSourcePicker.vue'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,10 +15,14 @@ import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
+import { useAccountStore } from '@/stores/account'
+import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 
 const { t } = useTranslation()
 const chat = useChatStore()
+const account = useAccountStore()
+const auth = useAuthStore()
 const {
   visibleMessages,
   messages,
@@ -27,6 +33,9 @@ const {
   backend,
   checkingLocalBackend,
   isLocalBackendAvailable,
+  usesAccount,
+  canRun,
+  lastUsage,
 } = storeToRefs(chat)
 
 const md = new MarkdownIt()
@@ -121,17 +130,22 @@ onMounted(() => {
           <!-- Failed answer -->
           <Alert v-else-if="message.role === 'assistant' && message.error" variant="destructive" class="chat-error">
             <CircleAlert aria-hidden="true" />
-            <AlertTitle>{{ t('chat.errorTitle') }}</AlertTitle>
-            <AlertDescription class="break-words">{{ message.content }}</AlertDescription>
-            <Button
-              v-if="message.index === lastIndex && !loading"
-              variant="outline"
-              size="sm"
-              class="col-span-2 mt-2 w-fit"
-              @click="chat.regenerate()"
-            >
-              <RefreshCw aria-hidden="true" />{{ t('common.retry') }}
-            </Button>
+            <AlertTitle>{{ message.errorKind && message.errorKind !== 'other' ? t(`chat.errors.${message.errorKind}.title`) : t('chat.errorTitle') }}</AlertTitle>
+            <AlertDescription class="break-words">
+              {{ message.errorKind && message.errorKind !== 'other' ? t(`chat.errors.${message.errorKind}.text`) : message.content }}
+            </AlertDescription>
+            <div v-if="message.index === lastIndex && !loading" class="col-span-2 mt-2 flex flex-wrap gap-2">
+              <Button v-if="message.errorKind === 'auth'" size="sm" @click="auth.signIn()">{{ t('auth.signIn') }}</Button>
+              <Button v-else-if="message.errorKind === 'credits' && account.billingEnabled" size="sm" as-child>
+                <RouterLink to="/pricing">{{ t('chat.errors.credits.cta') }}</RouterLink>
+              </Button>
+              <Button v-else-if="message.errorKind === 'expired'" variant="outline" size="sm" @click="chat.analyze()">
+                <Sparkles aria-hidden="true" />{{ t('chat.analyzeAgain') }}
+              </Button>
+              <Button v-else variant="outline" size="sm" @click="chat.regenerate()">
+                <RefreshCw aria-hidden="true" />{{ t('common.retry') }}
+              </Button>
+            </div>
           </Alert>
 
           <!-- AI -->
@@ -185,11 +199,17 @@ onMounted(() => {
       </template>
     </div>
 
+    <p v-if="usesAccount && account.balance && chat.llmChoice.source === 'managed'" class="usage-line num mt-2 text-center text-xs text-muted-foreground" role="status">
+      {{ t('chat.balance', { count: account.balance.total }) }}
+      <template v-if="lastUsage"> · {{ t('chat.lastCost', { count: lastUsage.credits }) }}</template>
+    </p>
     <p class="disclaimer-text mt-2 text-center text-xs text-muted-foreground">{{ t('chat.disclaimer') }}</p>
 
     <div class="mt-3 shrink-0">
       <!-- Analyze -->
-      <div v-if="toAnalyse" class="flex flex-wrap items-end justify-center gap-3">
+      <div v-if="toAnalyse" class="flex flex-col items-center gap-3">
+        <LlmSourcePicker v-if="usesAccount && auth.signedIn" />
+        <div class="flex flex-wrap items-end justify-center gap-3">
         <div class="flex flex-col gap-1.5">
           <Label for="style-selector" class="panel-label">{{ t('chat.style') }}</Label>
           <Select :model-value="selectedStyle" @update:model-value="onStyleChange">
@@ -203,9 +223,14 @@ onMounted(() => {
             </SelectContent>
           </Select>
         </div>
-        <Button size="lg" class="h-10 px-6 text-base font-bold" @click="chat.analyze()">
+        <Button size="lg" class="h-10 px-6 text-base font-bold" :disabled="!canRun" @click="chat.analyze()">
           <Sparkles aria-hidden="true" />{{ t('chat.analyze') }}
         </Button>
+        </div>
+        <p v-if="usesAccount && !auth.signedIn" class="text-sm text-muted-foreground">
+          {{ t('chat.signInToAnalyze') }}
+          <button type="button" class="text-lime underline" @click="auth.signIn()">{{ t('auth.signIn') }}</button>
+        </p>
       </div>
 
       <!-- Question -->

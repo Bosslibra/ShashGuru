@@ -38,3 +38,9 @@ ovms
 certbot
 # Vite cache
 .vite
+
+# Secrets and local state
+.env
+*.db
+backups/
+.env.local

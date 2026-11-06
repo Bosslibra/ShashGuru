@@ -1,6 +1,5 @@
 # This file is part of ShashGuru. Copyright (C) 2025 Alessandro Libralesso.
 # Licensed under the GNU GPL v3 or later, see COPYING.
-import json
 import os
 from pathlib import Path
 

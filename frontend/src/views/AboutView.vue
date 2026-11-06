@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { RouterLink } from 'vue-router'
 import { useTranslation } from 'i18next-vue'
+import { useAccountStore } from '@/stores/account'
 
 const { t } = useTranslation()
+const account = useAccountStore()
 </script>
 
 <template>
@@ -23,6 +26,14 @@ const { t } = useTranslation()
         <a href="https://www.gnu.org/licenses/gpl-3.0.en.html" target="_blank" rel="noopener noreferrer"
           >www.gnu.org/licenses</a
         >.
+      </p>
+      <p class="md-content">
+        <a href="https://github.com/Bosslibra/ShashGuru" target="_blank" rel="noopener noreferrer">{{ t('about.source') }}</a>
+        · {{ t('about.engines') }}
+      </p>
+      <p v-if="account.saas" class="md-content">
+        <RouterLink to="/legal/terms">{{ t('legal.termsTitle') }}</RouterLink> ·
+        <RouterLink to="/legal/privacy">{{ t('legal.privacyTitle') }}</RouterLink>
       </p>
     </section>
   </main>

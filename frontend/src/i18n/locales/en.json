@@ -4,7 +4,8 @@
     "live": "LIVE",
     "about": "ABOUT",
     "toggle": "Toggle navigation",
-    "language": "Language"
+    "language": "Language",
+    "pricing": "PRICING"
   },
   "common": {
     "close": "Close",
@@ -13,7 +14,8 @@
     "on": "ON",
     "off": "OFF",
     "white": "White",
-    "black": "Black"
+    "black": "Black",
+    "cancel": "Cancel"
   },
   "errors": {
     "invalidPgn": "PGN is invalid or empty.",
@@ -141,7 +143,39 @@
     "introTitle": "Ask the AI about this position",
     "intro": "Choose an analysis style and press Analyze to get a commentary of the current position. Then you can ask follow-up questions.",
     "backendRemote": "Cloud AI",
-    "send": "Send"
+    "send": "Send",
+    "source": "Pay with",
+    "sourceManaged": "ShashGuru credits",
+    "sourceByok": "My API key",
+    "model": "Model",
+    "modelPlaceholder": "Model name",
+    "key": "API key",
+    "creditsUnit": "cr",
+    "noKey": "You have no API key saved yet.",
+    "addKey": "Add one in your account",
+    "signInToAnalyze": "Sign in to get AI analysis.",
+    "analyzeAgain": "Analyze again",
+    "balance": "Balance: {{count}} credits",
+    "lastCost": "last answer: {{count}} credits",
+    "errors": {
+      "auth": {
+        "title": "Sign in required",
+        "text": "Sign in to use the AI analysis."
+      },
+      "credits": {
+        "title": "Not enough credits",
+        "text": "Your credits have run out. Buy more credits or subscribe, or use your own API key.",
+        "cta": "See plans"
+      },
+      "expired": {
+        "title": "Analysis expired",
+        "text": "This analysis is no longer available on the server. Run it again to keep asking questions."
+      },
+      "rateLimit": {
+        "title": "Too many requests",
+        "text": "You are sending requests too quickly. Wait a moment and try again."
+      }
+    }
   },
   "live": {
     "title": "Events and Broadcasts",
@@ -164,6 +198,193 @@
     "copyright": "© 2025 Alessandro Libralesso",
     "license": "ShashGuru is free software: you can redistribute it and/or modify it under the terms of the <strong>GNU General Public License</strong> as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.",
     "warranty": "ShashGuru is distributed in the hope that it will be useful, but <strong>WITHOUT ANY WARRANTY</strong>; without even the implied warranty of <em>MERCHANTABILITY</em> or <em>FITNESS FOR A PARTICULAR PURPOSE</em>. See the GNU General Public License for more details.",
-    "copy": "You should have received a copy of the GNU General Public License along with this program. If not, see"
+    "copy": "You should have received a copy of the GNU General Public License along with this program. If not, see",
+    "source": "Source code (GPLv3)",
+    "engines": "Chess engines: Alexander and ShashChess, licensed under the GNU GPL v3."
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "signOut": "Sign out",
+    "account": "Account",
+    "manageLogin": "Login settings",
+    "credits": "{{count}} credits",
+    "creditsTitle": "Your credit balance",
+    "signInToContinue": "Sign in to continue"
+  },
+  "keys": {
+    "title": "API keys",
+    "subtitle": "Use your own provider keys: you pay the provider directly and no credits are used.",
+    "intro": "Add your own API key to run analyses at your own cost. Keys are checked when saved.",
+    "empty": "No API keys saved yet.",
+    "add": "Add a key",
+    "provider": "Provider",
+    "label": "Label (optional)",
+    "labelPlaceholder": "e.g. Personal",
+    "apiKey": "API key",
+    "baseUrl": "Base URL",
+    "baseUrlHint": "An HTTPS endpoint compatible with the OpenAI API. Private network addresses are not allowed.",
+    "storedEncrypted": "Keys are stored encrypted on our servers and are never shown again.",
+    "save": "Save key",
+    "saved": "Key saved",
+    "failed": "Could not complete the operation.",
+    "test": "Test",
+    "testOk": "The key works.",
+    "testFailed": "The key was rejected.",
+    "delete": "Delete key",
+    "never": "never",
+    "lastUsed": "last used: {{date}}",
+    "providers": {
+      "openai": "OpenAI",
+      "anthropic": "Anthropic (Claude)",
+      "openrouter": "OpenRouter",
+      "custom": "OpenAI-compatible"
+    }
+  },
+  "pricing": {
+    "title": "Plans and credits",
+    "subtitle": "The engine is free. Pay only for the AI commentary, with credits or with your own API key.",
+    "free": {
+      "title": "Free",
+      "text": "No account needed for the engine.",
+      "engine": "Engine analysis and evaluation",
+      "board": "Board, PGN and live broadcasts"
+    },
+    "byok": {
+      "title": "Bring your own key",
+      "text": "Connect OpenAI, Anthropic, OpenRouter or any compatible endpoint.",
+      "cta": "Add your key"
+    },
+    "subscriptions": "Subscriptions",
+    "topups": "Credit packs",
+    "topupsText": "One-off packs that never expire.",
+    "month": "month",
+    "current": "Current plan",
+    "creditsPerMonth": "{{count}} credits / month",
+    "credits": "{{count}} credits",
+    "subscribe": "Subscribe",
+    "buy": "Buy",
+    "checkoutFailed": "Could not start the checkout.",
+    "paymentSuccess": "Payment received. Your credits will appear in a moment.",
+    "paymentCancelled": "Payment cancelled.",
+    "footnote": "Prices include applicable taxes where shown at checkout. Subscription credits expire at the end of the period; purchased credits do not."
+  },
+  "account": {
+    "title": "Your account",
+    "loading": "Loading your account...",
+    "plan": "Plan",
+    "planFree": "Free",
+    "renews": "Renews on {{date}}",
+    "creditsTotal": "Credits available",
+    "creditsSubscription": "From subscription",
+    "creditsPurchased": "Purchased",
+    "buyCredits": "Buy credits",
+    "manageSubscription": "Manage subscription",
+    "usageMonth": "This month",
+    "requests": "Requests",
+    "inputTokens": "Input tokens",
+    "outputTokens": "Output tokens",
+    "creditsUsed": "Credits used",
+    "history": "Usage history",
+    "historyEmpty": "No usage yet.",
+    "colDate": "Date",
+    "colSource": "Paid with",
+    "colModel": "Model",
+    "colTokens": "Tokens in / out",
+    "colCredits": "Credits",
+    "loadMore": "Load more",
+    "loadFailed": "Could not load your data.",
+    "portalFailed": "Could not open the billing portal.",
+    "data": "Your data",
+    "dataText": "Download everything we store about you, or delete your account permanently.",
+    "export": "Export my data",
+    "exportFailed": "Could not export your data.",
+    "delete": "Delete account",
+    "deleteTitle": "Delete your account?",
+    "deleteWord": "delete",
+    "deleteText": "This permanently deletes your account, API keys and usage history, and cancels any subscription. Remaining credits are lost. Type \"{{word}}\" to confirm.",
+    "deleteConfirmLabel": "Confirmation word",
+    "deleteConfirm": "Delete permanently",
+    "deleted": "Your account has been deleted.",
+    "deleteFailed": "Could not delete the account."
+  },
+  "legal": {
+    "termsTitle": "Terms of Service",
+    "privacyTitle": "Privacy Policy",
+    "draft": "Draft: this text is a template and must be reviewed by a legal professional before publication.",
+    "updated": "Last updated: {{date}}",
+    "back": "Back to home",
+    "terms": {
+      "sections": [
+        {
+          "title": "1. The service",
+          "body": "ShashGuru provides chess engine analysis and AI-generated commentary. The engine part is free. The AI commentary is available with prepaid credits, a subscription, or your own API key."
+        },
+        {
+          "title": "2. Accounts",
+          "body": "You need an account to use the AI commentary. You are responsible for keeping your login secure and for the activity on your account."
+        },
+        {
+          "title": "3. Credits and payments",
+          "body": "Credits are consumed according to the tokens used by each request and the model chosen. Subscription credits expire at the end of each billing period; purchased credits do not expire. Payments are processed by a third-party payment provider; we do not store your card details."
+        },
+        {
+          "title": "4. Your own API keys",
+          "body": "If you add your own provider key, usage is billed by that provider to you. We store the key encrypted and use it only to run your requests. You can delete it at any time."
+        },
+        {
+          "title": "5. Acceptable use",
+          "body": "Do not abuse the service, attempt to bypass limits, or use it to send unlawful content. We may rate-limit or suspend accounts that do."
+        },
+        {
+          "title": "6. AI content",
+          "body": "AI-generated commentary may contain errors. It is provided for information and study purposes only."
+        },
+        {
+          "title": "7. Refunds",
+          "body": "Unused purchased credits may be refunded on request within the period required by applicable consumer law. Contact us to ask."
+        },
+        {
+          "title": "8. Liability",
+          "body": "The service is provided as is, without warranty, to the extent permitted by law. The ShashGuru source code is free software under the GNU GPL v3 or later."
+        },
+        {
+          "title": "9. Contact",
+          "body": "Questions about these terms: [contact email to be added]."
+        }
+      ]
+    },
+    "privacy": {
+      "sections": [
+        {
+          "title": "1. Who we are",
+          "body": "The controller of your data is [legal name and address to be added]."
+        },
+        {
+          "title": "2. Data we process",
+          "body": "Account data (email, identifier), the positions and questions you send for analysis, usage records (model, tokens, credits), and your encrypted API keys if you add any."
+        },
+        {
+          "title": "3. Why",
+          "body": "To provide the service, apply credits and limits, prevent abuse and comply with legal obligations (e.g. invoicing)."
+        },
+        {
+          "title": "4. Processors",
+          "body": "We use third parties to run the service: an authentication provider, a payment provider and the AI model providers that answer your requests (the positions and questions you send are transmitted to them). When you use your own key, your requests go to the provider you chose."
+        },
+        {
+          "title": "5. Cookies",
+          "body": "We only use technical cookies and local storage needed for login, payments and your preferences. No advertising or analytics cookies."
+        },
+        {
+          "title": "6. Retention",
+          "body": "Account and usage data are kept while your account exists; invoices are kept as long as the law requires. Analysis contexts expire automatically after a short time."
+        },
+        {
+          "title": "7. Your rights",
+          "body": "You can export your data and delete your account from the Account page. You can also contact us to exercise your access, rectification, erasure, portability and objection rights, or complain to your data protection authority."
+        }
+      ]
+    }
   }
 }

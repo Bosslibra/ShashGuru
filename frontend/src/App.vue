@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { defineAsyncComponent, onUnmounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useTranslation } from 'i18next-vue'
 import { Languages, Menu } from '@lucide/vue'
 import { SUPPORTED_LANGUAGES } from '@/i18n'
+import AccountMenu from '@/components/AccountMenu.vue'
+import { useAccountStore } from '@/stores/account'
 import { Toaster } from '@/components/ui/sonner'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -18,11 +20,19 @@ const DevDirectionSwitcher = import.meta.env.DEV
   ? defineAsyncComponent(() => import('@/dev/DevDirectionSwitcher.vue'))
   : null
 
-const NAV = [
-  { to: '/', key: 'nav.home' },
-  { to: '/live', key: 'nav.live' },
-  { to: '/about', key: 'nav.about' },
-] as const
+const account = useAccountStore()
+
+// Pricing is shown only on a hosted deployment with billing; self-hosted installs see the original menu.
+type NavKey = 'nav.home' | 'nav.live' | 'nav.pricing' | 'nav.about'
+const NAV = computed(() => {
+  const items: { to: string; key: NavKey }[] = [
+    { to: '/', key: 'nav.home' },
+    { to: '/live', key: 'nav.live' },
+  ]
+  if (account.billingEnabled) items.push({ to: '/pricing', key: 'nav.pricing' })
+  items.push({ to: '/about', key: 'nav.about' })
+  return items
+})
 
 const menuOpen = ref(false)
 watch(
@@ -69,8 +79,9 @@ function changeLanguage(value: unknown) {
         </RouterLink>
       </div>
 
-      <!-- Desktop language -->
-      <div class="ml-auto hidden items-center gap-2 md:flex">
+      <!-- Desktop account + language -->
+      <div class="ml-auto hidden items-center gap-3 md:flex">
+        <AccountMenu />
         <Languages class="size-4 text-cream/70" aria-hidden="true" />
         <Select :model-value="language" @update:model-value="changeLanguage">
           <SelectTrigger size="sm" class="w-[72px]" :aria-label="t('nav.language')">
@@ -105,6 +116,9 @@ function changeLanguage(value: unknown) {
               >
                 {{ t(item.key) }}
               </RouterLink>
+            </div>
+            <div v-if="account.saas" class="mt-4 border-t border-border pt-4">
+              <AccountMenu mobile />
             </div>
             <div class="mt-4 flex items-center gap-2 border-t border-border pt-4">
               <Languages class="size-4 text-muted-foreground" aria-hidden="true" />

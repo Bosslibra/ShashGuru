@@ -1,0 +1,37 @@
+# Commercial offers. Credits are the only unit the application knows about:
+#   1 credit = SETTINGS.usd_per_credit (default 0.001 USD) of LLM usage at customer prices.
+#
+# `external` maps an offer to its id at each payment provider. Changing payment provider means
+# adding that provider's ids here (and an adapter): no data migration, no code in the domain.
+#
+# kind: subscription -> `credits` are granted on every paid period and expire at the end of it
+# kind: topup        -> one-off purchase, `credits` never expire
+#
+# NOTE: prices and credit amounts are placeholders. Set your own before launch.
+offers:
+  - id: pro_monthly
+    kind: subscription
+    name: Pro
+    credits: 10000
+    price: 9.00
+    currency: eur
+    external:
+      stripe: price_REPLACE_ME_PRO_MONTHLY
+
+  - id: topup_small
+    kind: topup
+    name: "5.000 crediti"
+    credits: 5000
+    price: 5.00
+    currency: eur
+    external:
+      stripe: price_REPLACE_ME_TOPUP_SMALL
+
+  - id: topup_large
+    kind: topup
+    name: "25.000 crediti"
+    credits: 25000
+    price: 20.00
+    currency: eur
+    external:
+      stripe: price_REPLACE_ME_TOPUP_LARGE

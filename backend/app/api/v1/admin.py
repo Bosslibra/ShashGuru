@@ -3,12 +3,12 @@
 import redis
 from fastapi import APIRouter, Depends, HTTPException, Response
 
-from app.api.deps import get_cache, get_engines
+from app.api.deps import get_cache, get_engines, require_admin
 from app.schemas import CacheStats
 from app.services.engine_cache import EngineCache
 from app.services.engine_pool import EngineService
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
 
 @router.get("/cache", response_model=CacheStats)

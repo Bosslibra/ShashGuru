@@ -7,11 +7,11 @@ from fastapi import FastAPI
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1 import admin, engine
+from app.api.v1 import account, admin, engine
 from app.api.v1 import llm as llm_api
+from app.bootstrap import build_state, start_database, stop_services
 from app.config import get_settings
 from app.metrics import MetricsMiddleware, metrics_response
-from app.services import llm
 from app.services.engine_cache import create_cache
 from app.services.engine_pool import EngineService
 
@@ -24,24 +24,23 @@ async def lifespan(app: FastAPI):
     cache = create_cache(settings)
     engines = EngineService(settings, cache)
     await run_in_threadpool(engines.start)
-    app.state.settings = settings
-    app.state.cache = cache
-    app.state.engines = engines
-    app.state.llm = llm.create_client(settings)
+    build_state(app, settings, cache, engines)
+    await start_database(app)
     yield
-    await app.state.llm.close()
+    await stop_services(app)
     await run_in_threadpool(engines.shutdown)
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="ShashGuru API", version="1.0.0", lifespan=lifespan)
+    app = FastAPI(title="ShashGuru API", version="1.1.0", lifespan=lifespan)
     settings = get_settings()
     app.add_middleware(MetricsMiddleware)
     app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins,
-                       allow_methods=["*"], allow_headers=["*"])
+                       allow_methods=["*"], allow_headers=["*"], expose_headers=["Retry-After"])
 
     app.include_router(engine.router, prefix="/api/v1")
     app.include_router(llm_api.router, prefix="/api/v1")
+    app.include_router(account.router, prefix="/api/v1")
     app.include_router(admin.router, prefix="/api/v1")
 
     @app.get("/health", tags=["ops"])

@@ -1,0 +1,98 @@
+# Production stack: Caddy (HTTPS) -> static frontend + API -> Postgres + Redis. No GPU / OVMS needed:
+# LLMs come from external providers (platform keys) or from the users own keys.
+#
+#   cp .env.example .env   # fill it in, then:
+#   docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+name: shashguru
+
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [frontend, backend]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_AUTH_PROVIDER: ${VITE_AUTH_PROVIDER:-clerk}
+        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:-}
+    restart: unless-stopped
+    volumes:
+      - ./config/nginx.spa.conf:/etc/nginx/nginx.conf:ro
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DEPLOYMENT_MODE: saas
+      TRUST_PROXY: "true"
+      PUBLIC_URL: https://${SITE_ADDRESS}
+      CORS_ORIGINS: https://${SITE_ADDRESS}
+      REDIS_HOST: redis
+      DATABASE_URL: postgresql+asyncpg://shashguru:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/shashguru
+      # One worker: the engine pool lives in the process. Size it to the machine (see docs/SAAS.md).
+      ENGINE_POOL_SIZE: ${ENGINE_POOL_SIZE:-4}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    # Defence in depth for custom BYOK endpoints: see docs/SAAS.md ("Egress filtering").
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: shashguru
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: shashguru
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shashguru"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+
+  # Daily dumps, 7 daily / 4 weekly / 6 monthly kept. Copy ./backups off the machine as well.
+  backup:
+    image: prodrigestivill/postgres-backup-local:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: shashguru
+      POSTGRES_USER: shashguru
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      SCHEDULE: "@daily"
+      BACKUP_KEEP_DAYS: 7
+      BACKUP_KEEP_WEEKS: 4
+      BACKUP_KEEP_MONTHS: 6
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  caddy_data:
+  caddy_config:
+  pg_data:

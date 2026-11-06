@@ -1,0 +1,36 @@
+# LLMs offered against credits ("managed" models), billed with the platform's own provider keys.
+# Prices are USD per 1M tokens as charged by the provider, BEFORE the markup (SETTINGS.credit_markup).
+# VERIFY these against the providers' pricing pages before launch and whenever they change.
+#
+# A model is listed to users only if the platform key of its provider is configured.
+# `effort` (anthropic only) is sent as output_config.effort to keep short analyses cheap.
+managed:
+  - id: claude-haiku-5-5
+    label: Claude Haiku 5.5
+    provider: anthropic
+    price_in: 0.10
+    price_out: 0.50
+    effort: low
+  - id: claude-sonnet-5-5
+    label: Claude Sonnet 5.5
+    provider: anthropic
+    price_in: 2.00
+    price_out: 10.00
+    effort: low
+    requires_subscription: true
+  - id: claude-opus-5-5
+    label: Claude Opus 5.5
+    provider: anthropic
+    price_in: 4.00
+    price_out: 20.00
+    effort: low
+    requires_subscription: true
+
+default_managed: claude-haiku-5-5
+
+# Suggestions shown in the "bring your own key" model picker. Users may type any model id.
+byok_suggestions:
+  openai: [gpt-4o-mini, gpt-4.1-mini]
+  anthropic: [claude-haiku-5-5, claude-sonnet-5-5, claude-opus-5-5]
+  openrouter: [openai/gpt-4o-mini]
+  custom: []
