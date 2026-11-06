@@ -13,4 +13,4 @@ COPY backend/ .
 
 EXPOSE 5000
 
-CMD ["/opt/venv/bin/python", "ShashGuruBackend.py"]
+CMD ["/opt/venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5000"]

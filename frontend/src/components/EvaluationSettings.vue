@@ -7,7 +7,6 @@
           <input 
             type="checkbox" 
             v-model="localEnabled"
-            @change="updateEnabled"
           />
           <span class="slider"></span>
         </label>
@@ -27,7 +26,6 @@
         :max="MAX_DEPTH" 
         step="1"
         class="setting-slider"
-        @input="updateDepth"
       />
     </div>
     
@@ -39,7 +37,6 @@
             <input 
               type="checkbox" 
               v-model="localShowBestMove"
-              @change="updateShowBestMove"
             />
             <span class="slider-small"></span>
           </label>
@@ -60,7 +57,6 @@
         :max="MAX_SHOW_LINES" 
         step="1"
         class="setting-slider"
-        @input="updateShowLines"
       />
     </div>
     
@@ -75,92 +71,39 @@
   </div>
 </template>
 
-<script setup>
-import { ref, watch, onUnmounted } from 'vue'
-import { DEFAULT_DEPTH, DEFAULT_EVALUATION_ENABLED, DEFAULT_SHOW_BEST_MOVE, DEFAULT_SHOW_LINES, MIN_DEPTH, MAX_DEPTH, MIN_SHOW_LINES, MAX_SHOW_LINES } from '@/constants/evaluation.js'
+<script setup lang="ts">
+import { computed, ref, onUnmounted } from 'vue'
+import { MIN_DEPTH, MAX_DEPTH, MIN_SHOW_LINES, MAX_SHOW_LINES } from '@/constants/evaluation'
+import { useSettingsStore } from '@/stores/settings'
 
-const props = defineProps({
-  depth: {
-    type: Number,
-    default: DEFAULT_DEPTH
-  },
-  enabled: {
-    type: Boolean,
-    default: DEFAULT_EVALUATION_ENABLED
-  },
-  showBestMove: {
-    type: Boolean,
-    default: DEFAULT_SHOW_BEST_MOVE
-  },
-  showLines: {
-    type: Number,
-    default: DEFAULT_SHOW_LINES
-  }
+const settings = useSettingsStore()
+
+// Toggles and line count apply immediately.
+const localEnabled = computed({
+  get: () => settings.enabled,
+  set: (value: boolean) => (settings.enabled = value),
+})
+const localShowBestMove = computed({
+  get: () => settings.showBestMove,
+  set: (value: boolean) => (settings.showBestMove = value),
+})
+const localShowLines = computed({
+  get: () => settings.lines,
+  set: (value: number | string) => (settings.lines = Number(value)),
 })
 
-const emit = defineEmits(['update:depth', 'update:enabled', 'update:showBestMove', 'update:showLines'])
+// Changing the depth triggers a (slow) new evaluation, so it is applied when the modal closes.
+const localDepth = ref<number | string>(settings.depth)
 
-const localDepth = ref(props.depth)
-const localEnabled = ref(props.enabled)
-const localShowBestMove = ref(props.showBestMove)
-const localShowLines = ref(props.showLines)
-
-// Track original depth to compare on close
-const originalDepth = ref(props.depth)
-
-const updateDepth = () => {
-  // Don't emit immediately, just update local value
-  // The depth will be emitted when component unmounts (modal closes)
-}
-
-const updateEnabled = () => {
-  emit('update:enabled', localEnabled.value)
-}
-
-const updateShowBestMove = () => {
-  emit('update:showBestMove', localShowBestMove.value)
-}
-
-const updateShowLines = () => {
-  emit('update:showLines', parseInt(localShowLines.value))
-}
-
-const resetToDefaults = () => {
-  localDepth.value = DEFAULT_DEPTH
-  localShowBestMove.value = DEFAULT_SHOW_BEST_MOVE
-  localShowLines.value = DEFAULT_SHOW_LINES
-  // For reset, immediately emit all changes
-  emit('update:depth', parseInt(localDepth.value))
-  updateShowBestMove()
-  updateShowLines()
-  // Update original depth since we emitted it
-  originalDepth.value = localDepth.value
-}
-
-// Emit depth changes when component is unmounted (modal closes)
 onUnmounted(() => {
-  if (localDepth.value !== originalDepth.value) {
-    emit('update:depth', parseInt(localDepth.value))
-  }
+  const depth = Number(localDepth.value)
+  if (depth !== settings.depth) settings.depth = depth
 })
 
-// Watch for prop changes
-watch(() => props.depth, (newVal) => {
-  localDepth.value = newVal
-  originalDepth.value = newVal
-})
-
-watch(() => props.enabled, (newVal) => {
-  localEnabled.value = newVal
-})
-
-watch(() => props.showBestMove, (newVal) => {
-  localShowBestMove.value = newVal
-})
-
-watch(() => props.showLines, (newVal) => {
-  localShowLines.value = newVal
-})
+function resetToDefaults() {
+  settings.reset()
+  localDepth.value = settings.depth
+}
 </script>
 
 <style scoped>

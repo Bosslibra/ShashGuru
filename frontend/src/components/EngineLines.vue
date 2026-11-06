@@ -1,5 +1,5 @@
 <template>
-  <div v-if="lines && lines.length > 0 || loading" class="engine-lines shadow mb-0 pb-0">
+  <div v-if="lines.length > 0 || loading" class="engine-lines shadow mb-0 pb-0">
     <div class="lines-header rounded-top">
       <span class="header-text fs-6">Engine Analysis</span>
       <span class="depth-badge">Depth {{ depth }}</span>
@@ -20,17 +20,17 @@
       >
         <div class="line-evaluation">
           <span class="line-rank">{{ index + 1 }}.</span>
-          <span class="eval-score" :class="getEvaluationClass(line.evaluation)">
-            {{ formatEvaluation(line.evaluation) }}
+          <span class="eval-score" :class="evaluationClass(line)">
+            {{ formatEvaluation(line) }}
           </span>
         </div>
         <div class="line-moves">
           <span 
-            v-for="(move, moveIndex) in parseMoves(line.moves)" 
+            v-for="(move, moveIndex) in parseMoves(line)" 
             :key="moveIndex"
             class="line-move"
             :class="{ 'white-move': move.isWhite, 'black-move': !move.isWhite }"
-            @click="onMoveClicked(move.san, line, moveIndex)"
+            @click="onMoveClicked(move.san)"
           >
             <span v-if="move.moveNumber" class="move-number">{{ move.moveNumber }}.</span>
             {{ move.san }}
@@ -41,171 +41,74 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { Chess } from 'chess.js'
-import { DEFAULT_SHOW_LINES } from '@/constants/evaluation.js'
+import { evalClass as getEvaluationClass, formatScore, isWhiteToMove } from '@/lib/evalFormat'
+import { useEvaluationStore } from '@/stores/evaluation'
+import { useGameStore } from '@/stores/game'
+import { useSettingsStore } from '@/stores/settings'
+import type { EngineLine } from '@/types/api'
 
-const props = defineProps({
-  lines: {
-    type: Array,
-    default: () => []
-  },
-  maxLines: {
-    type: Number,
-    default: DEFAULT_SHOW_LINES
-  },
-  depth: {
-    type: Number,
-    default: 0
-  },
-  currentFen: {
-    type: String,
-    default: ''
-  },
-  loading: {
-    type: Boolean,
-    default: false
-  }
-})
-
-const emit = defineEmits(['moveClicked'])
-
-function onMoveClicked(move, line, moveIndex) {
-  emit('moveClicked', move, line, moveIndex)
+interface DisplayMove {
+  san: string
+  uci: string
+  isWhite: boolean
+  moveNumber: number | null
 }
 
-// Helper function to determine whose turn it is from FEN
-const isWhiteToMove = computed(() => {
-  if (!props.currentFen) return true
-  const fenParts = props.currentFen.split(' ')
-  return fenParts[1] === 'w'
-})
+const MAX_DISPLAYED_MOVES = 6
+
+const game = useGameStore()
+const { lines, current, loading } = storeToRefs(useEvaluationStore())
+const settings = useSettingsStore()
+
+const currentFen = computed(() => game.currentNode.fen)
+// Lines belong to the evaluated position; scores are relative to *its* side to move.
+const evaluatedFen = computed(() => current.value?.fen ?? currentFen.value)
+const whiteToMove = computed(() => isWhiteToMove(evaluatedFen.value))
+const depth = computed(() => current.value?.depth || settings.depth)
 
 // Display only the requested number of lines
-const displayLines = computed(() => {
-  if (!props.lines) return []
-  return props.lines.slice(0, props.maxLines)
-})
+const displayLines = computed(() => lines.value.slice(0, settings.lines))
 
-// Parse moves from the engine line format and convert UCI to SAN
-function parseMoves(movesString) {
-  if (!movesString || !props.currentFen) return []
-  
-  // Split moves and clean them
-  const uciMoves = movesString.trim().split(/\s+/)
-  const parsedMoves = []
-  
-  // Create a chess instance starting from current position
-  const chess = new Chess(props.currentFen)
-  
-  // Determine starting move number from current FEN
-  const fenParts = props.currentFen.split(' ')
-  const isWhiteToMove = fenParts[1] === 'w'
-  const fullMoveNumber = parseInt(fenParts[5]) || 1
-  
-  let currentMoveNumber = fullMoveNumber
-  let isCurrentlyWhite = isWhiteToMove
-  
-  uciMoves.forEach((uciMove, index) => {
-    // Skip move numbers that might be in the string
-    if (uciMove.match(/^\d+\.+$/)) return
-    
-    // Clean move notation
-    const cleanUciMove = uciMove.replace(/^\d+\.+/, '')
-    if (!cleanUciMove) return
-    
+function onMoveClicked(move: string) {
+  // Only the first line's moves apply to the position on the board.
+  game.play(move)
+}
+
+// Convert the engine line (UCI) to SAN, starting from the evaluated position
+function parseMoves(line: EngineLine): DisplayMove[] {
+  const fen = evaluatedFen.value
+  if (!line.pv.length || !fen) return []
+
+  const chess = new Chess(fen)
+  const fenParts = fen.split(' ')
+  let isWhite = fenParts[1] !== 'b'
+  let moveNumber = parseInt(fenParts[5]) || 1
+
+  const parsed: DisplayMove[] = []
+  for (const uci of line.pv.slice(0, MAX_DISPLAYED_MOVES)) {
+    let san = uci
     try {
-      // Convert UCI to SAN using chess.js
-      const move = chess.move(cleanUciMove)
-      if (move) {
-        parsedMoves.push({
-          san: move.san,
-          uci: cleanUciMove,
-          isWhite: isCurrentlyWhite,
-          moveNumber: isCurrentlyWhite ? currentMoveNumber : null
-        })
-        
-        // Update move tracking
-        if (isCurrentlyWhite) {
-          isCurrentlyWhite = false
-        } else {
-          isCurrentlyWhite = true
-          currentMoveNumber++
-        }
-      }
+      san = chess.move({
+        from: uci.slice(0, 2),
+        to: uci.slice(2, 4),
+        promotion: uci.length > 4 ? uci[4] : undefined,
+      }).san
     } catch (error) {
-      console.warn(`Failed to parse UCI move: ${cleanUciMove}`, error)
-      // If parsing fails, still show the original move
-      parsedMoves.push({
-        san: cleanUciMove,
-        uci: cleanUciMove,
-        isWhite: isCurrentlyWhite,
-        moveNumber: isCurrentlyWhite ? currentMoveNumber : null
-      })
-      
-      // Update move tracking
-      if (isCurrentlyWhite) {
-        isCurrentlyWhite = false
-      } else {
-        isCurrentlyWhite = true
-        currentMoveNumber++
-      }
+      console.warn(`Failed to parse UCI move: ${uci}`, error)
     }
-  })
-
-  // Limit to first 6 moves for display
-  return parsedMoves.slice(0, 6)
+    parsed.push({ san, uci, isWhite, moveNumber: isWhite ? moveNumber : null })
+    if (!isWhite) moveNumber++
+    isWhite = !isWhite
+  }
+  return parsed
 }
 
-// Format evaluation score considering side to move
-function formatEvaluation(evaluation) {
-  if (evaluation === null || evaluation === undefined) return '0.0'
-  
-  // Determine if we need to flip the evaluation based on whose turn it was
-  // The evaluation is always from the perspective of the side to move
-  // We want to show it from White's perspective consistently
-  let adjustedEvaluation = evaluation
-  if (!isWhiteToMove.value) {
-    // If it was black to move, flip the evaluation to show from white's perspective
-    adjustedEvaluation = -evaluation
-  }
-  
-  if (Math.abs(adjustedEvaluation) > 900) {
-    // Mate in N moves
-    const mateIn = Math.abs(adjustedEvaluation) - 1000
-    const sign = adjustedEvaluation > 0 ? '+' : ''
-    return `M${sign}${adjustedEvaluation > 0 ? mateIn : -mateIn}`
-  }
-  
-  // Regular evaluation in centipawns, convert to pawns
-  const pawns = adjustedEvaluation / 100
-  const sign = pawns >= 0 ? '+' : ''
-  return `${sign}${pawns.toFixed(1)}`
-}
-
-// Get CSS class for evaluation color considering side to move
-function getEvaluationClass(evaluation) {
-  if (evaluation === null || evaluation === undefined) return 'neutral'
-  
-  // Adjust evaluation based on whose turn it was (same logic as formatEvaluation)
-  let adjustedEvaluation = evaluation
-  if (!isWhiteToMove.value) {
-    adjustedEvaluation = -evaluation
-  }
-  
-  if (Math.abs(adjustedEvaluation) > 900) {
-    // Mate
-    return adjustedEvaluation > 0 ? 'white-winning' : 'black-winning'
-  }
-  
-  if (adjustedEvaluation > 100) return 'white-better'
-  if (adjustedEvaluation > 50) return 'white-slightly-better'
-  if (adjustedEvaluation < -100) return 'black-better'
-  if (adjustedEvaluation < -50) return 'black-slightly-better'
-  
-  return 'neutral'
-}
+const formatEvaluation = (line: EngineLine) => formatScore(line.score, whiteToMove.value)
+const evaluationClass = (line: EngineLine) => getEvaluationClass(line.score, whiteToMove.value)
 </script>
 
 <style scoped>

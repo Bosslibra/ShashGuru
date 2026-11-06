@@ -1,357 +1,74 @@
-<script setup>
-import { ref, watch, nextTick, onMounted } from 'vue';
-import { validateFen } from 'fentastic';
-import MarkdownIt from 'markdown-it';
+<script setup lang="ts">
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import MarkdownIt from 'markdown-it'
+import { useChatStore } from '@/stores/chat'
 
-const remote_server_url = import.meta.env.BASE_URL + 'backend'
-const local_server_url = 'http://localhost:5000'
-const starting_fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-//emits
-const emit = defineEmits(['loadingChat']);
+const chat = useChatStore()
+const {
+  visibleMessages,
+  messages,
+  loading,
+  toAnalyse,
+  styles: analysisStyles,
+  style: selectedStyle,
+  checkingLocalBackend,
+  isLocalBackendAvailable,
+} = storeToRefs(chat)
 
-// Props
-const props = defineProps({
-    fen: {
-        type: String,
-        required: true,
-    },
-    depth: {
-        type: Number,
-        required: true,
-    }
-});
-// Markdown
-const md = new MarkdownIt();
+const md = new MarkdownIt()
 
-
-// Reactive state
-const userInput = ref('');
-const messages = ref([]);
-const loading = ref(false)
-const toAnalyse = ref(true);
-const justCopiedMsg = ref(false);
-const selectedStyle = ref('default');
-const analysisStyles = ref([
-    { value: 'default', label: 'Commentator' } // Always present as fallback
-]);
-
+const userInput = ref('')
+const messagesEl = ref<HTMLElement | null>(null)
+const copiedIndex = ref<number | null>(null)
 const isClipboardCopyingAvailable = ref(true)
-const isLocalBackendAvailable = ref(false)
-const checkingLocalBackend = ref(true)
 
-// Computed property for server URL
-const server_url = ref(remote_server_url)
+/** Index of the last message: only that one can be regenerated. */
+const lastIndex = computed(() => messages.value.length - 1)
 
-// Methods
-
-async function checkLocalBackendAvailability() {
-    console.log("Checking local backend availability...");
-    try {
-        // Check if local backend is available by testing the health endpoint first
-        const healthCheck = await fetch(local_server_url + '/health', { 
-            method: 'GET',
-            signal: AbortSignal.timeout(500) // 500ms timeout
-        });
-
-        if (healthCheck.ok) {
-            // Double-check with analysis/styles endpoint to ensure AI functionality is available
-            const stylesCheck = await fetch(local_server_url + '/analysis', { 
-                method: 'OPTIONS',
-                signal: AbortSignal.timeout(500)
-            });
-            
-            if (stylesCheck.ok) {
-                console.log("Local backend detected and AI endpoints available! Switching to localhost.");
-                isLocalBackendAvailable.value = true;
-                server_url.value = local_server_url;
-                return;
-            }
-        }
-        
-        console.log("Local backend not available. Using remote server.");
-        isLocalBackendAvailable.value = false;
-        server_url.value = remote_server_url;
-        
-    } catch (error) {
-        console.log("Error checking local backend:", error);
-        isLocalBackendAvailable.value = false;
-        server_url.value = remote_server_url;
-    } finally {
-        checkingLocalBackend.value = false;
-    }
-}
-
-async function recheckLocalBackend() {
-    checkingLocalBackend.value = true;
-    await checkLocalBackendAvailability();
-    // Re-fetch styles from the newly selected server
-    await fetchAnalysisStyles();
-}
-
-async function fetchAnalysisStyles() {
-    console.log("Fetching analysis styles from server...");
-    try {
-        const response = await fetch(remote_server_url + '/analysis/styles');
-        if (response.ok) {
-            const data = await response.json();
-            if (data.styles && Array.isArray(data.styles)) {
-                analysisStyles.value = data.styles;
-                // Ensure "Commentator" (default) is always present
-                const hasDefault = analysisStyles.value.some(style => style.value === 'default');
-                if (!hasDefault) {
-                    analysisStyles.value.unshift({ value: 'default', label: 'Commentator' });
-                }
-            }
-        } else {
-            console.warn('Failed to fetch analysis styles, using fallback');
-        }
-    } catch (error) {
-        console.error('Error fetching analysis styles:', error);
-        // Keep fallback styles if API fails
-    }
-}
-
-async function sendMessageSTREAMED() {
-    if (userInput.value.trim() === '') return;
-
-    const userMessage = { role: 'user', content: userInput.value };
-    messages.value.push(userMessage);
-    userInput.value = '';
-    loading.value = true;
-    emit('loadingChat', true);
-    scrollToBottom();
-
-    try {
-        const response = await fetch(server_url.value + `/response?style=${selectedStyle.value}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(messages.value),
-        });
-
-        if (!response.ok || !response.body) {
-            throw new Error('Network response was not ok');
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let fullMessage = "";
-        let streamStarted = false;
-
-        messages.value.push({ role: 'assistant', content: '' });
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value, { stream: true });
-
-            console.log("Received message chunk:", chunk);
-
-            if (chunk.includes("[START_STREAM]")) {
-                streamStarted = true;
-                continue;
-            }
-
-            if (!streamStarted) continue;
-
-            if (chunk.includes("[END_STREAM]")) {
-                fullMessage += chunk.replace("[END_STREAM]", "");
-                break;
-            }
-
-            fullMessage += chunk;
-            messages.value[messages.value.length - 1].content = fullMessage;
-            scrollToBottom();
-        }
-
-        // Final update (optional, you already streamed into it)
-        fullMessage = fullMessage.trim();
-        messages.value[messages.value.length - 1].content = fullMessage;
-
-    } catch (error) {
-        console.error('Streaming error:', error);
-        messages.value.push({ role: 'assistant', content: 'Error: unable to fetch response.' });
-        scrollToBottom();
-    } finally {
-        loading.value = false;
-        emit('loadingChat', false);
-        console.log(messages.value)
-    }
-}
-
-
-async function startAnalysisSTREAMED() {
-    toAnalyse.value = false;
-    messages.value.length = 0;
-    const fenToAnalyse = validateFen(props.fen.trim()).valid ? props.fen.trim() : starting_fen;
-
-    if (validateFen(fenToAnalyse).valid) {
-        loading.value = true;
-        emit('loadingChat', true);
-
-        try {
-            const response = await fetch(server_url.value + '/analysis', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    fen: fenToAnalyse,
-                    depth: props.depth,
-                    style: selectedStyle.value
-                })
-            });
-
-            if (!response.ok || !response.body) {
-                console.error(response.ok, response.body)
-                throw new Error("Network response was not ok.");
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let fullMessageANALYSIS = "";
-            let promptReceived = false;
-            let systemPrompt = "";
-
-            messages.value.push({ role: 'assistant', content: '' });
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                let chunk = decoder.decode(value, { stream: true });
-
-                // log raw chunk for debugging
-                console.log("Received chunk:", chunk);
-
-                if (!promptReceived) {
-                    const promptEndIndex = chunk.indexOf('[PROMPT_END]');
-                    if (promptEndIndex > -1) {
-                        const promptPart = chunk.substring(0, promptEndIndex);
-                        try {
-                            const promptData = JSON.parse(promptPart);
-                            systemPrompt = promptData.prompt;
-                            promptReceived = true;
-
-                            // Store the system prompt as the first message
-                            messages.value.unshift({
-                                role: 'system',
-                                content: systemPrompt,
-                                hidden: true // Optional: hide from UI
-                            });
-
-                            // Remove the prompt part from the chunk
-                            chunk = chunk.substring(promptEndIndex + '[PROMPT_END]'.length);
-                        } catch (e) {
-                            console.error("Error parsing prompt:", e);
-                        }
-                    }
-                }
-
-                if (chunk.includes("[START_STREAM]")) {
-                    chunk = chunk.replace("[START_STREAM]", "");
-                }
-
-                if (chunk.includes("[END_STREAM]")) {
-                    chunk = chunk.replace("[END_STREAM]", "");
-                }
-
-                fullMessageANALYSIS += chunk;
-                messages.value[messages.value.length - 1].content = fullMessageANALYSIS;
-                scrollToBottom();
-            }
-
-            // Final cleanup
-            fullMessageANALYSIS = fullMessageANALYSIS.trim();
-            messages.value[messages.value.length - 1].content = fullMessageANALYSIS;
-
-        } catch (error) {
-            console.error('Streaming error:', error);
-            messages.value.push({ role: 'assistant', content: 'Error: unable to fetch analysis.' });
-            scrollToBottom();
-        } finally {
-            loading.value = false;
-            emit('loadingChat', false);
-        }
-    }
-}
-
-
-// Watcher
-watch(() => props.fen, () => {
-    toAnalyse.value = true;
-});
-// Add this watcher
-watch(() => messages.value.length, () => {
-    scrollToBottom();
-});
-// Reset to analyze state when style changes
-watch(() => selectedStyle.value, () => {
-    if (messages.value.length > 0) {
-        toAnalyse.value = true;
-    }
-});
-function renderedMarkdown(content) {
-    return md.render(content)
+function renderedMarkdown(content: string) {
+  return md.render(content)
 }
 
 function scrollToBottom() {
-    nextTick(() => {
-        const messagesEl = document.getElementById('messages');
-        if (messagesEl) {
-            messagesEl.scrollTo({
-                top: messagesEl.scrollHeight,
-                behavior: 'smooth'
-            });
-        }
-    });
+  nextTick(() => messagesEl.value?.scrollTo({ top: messagesEl.value.scrollHeight, behavior: 'smooth' }))
 }
 
-// Copy text to clipboard
-async function copyMessage(text) {
-    try {
-        await navigator.clipboard.writeText(text)
-        justCopiedMsg.value = true
-        setTimeout(() => {
-            justCopiedMsg.value = false
-        }, 1000);
-    } catch (err) {
-        console.error("Copying failed:", err)
-    }
+async function send() {
+  const question = userInput.value
+  if (!question.trim() || loading.value) return
+  userInput.value = ''
+  await chat.ask(question)
 }
 
-//  Regenerate assistant reply
-
-async function regenerateMessage(index) {
-    const lastUserIndex = messages.value
-        .slice(0, index)
-        .map((msg, i) => ({ msg, i }))
-        .reverse()
-        .find(item => item.msg.role === 'user')?.i;
-    if (lastUserIndex === undefined) return;
-    const lastUserMessage = messages.value[lastUserIndex];
-    userInput.value = lastUserMessage.content;
-    messages.value.splice(index - 1, 2);
-    await sendMessageSTREAMED()
+async function copyMessage(index: number, text: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+    copiedIndex.value = index
+    setTimeout(() => {
+      if (copiedIndex.value === index) copiedIndex.value = null
+    }, 1000)
+  } catch (err) {
+    console.error('Copying failed:', err)
+  }
 }
 
-onMounted(async () => {
-    isClipboardCopyingAvailable.value = navigator.clipboard.writeText ? true : false
-    await checkLocalBackendAvailability()
-    await fetchAnalysisStyles()
+watch(messages, scrollToBottom, { deep: true })
+
+onMounted(() => {
+  isClipboardCopyingAvailable.value = !!navigator.clipboard?.writeText
+  chat.init()
+  scrollToBottom()
 })
-
 </script>
 
 
 <template>
     <div class="container-fill d-flex flex-column  overflow-auto p-3 me-0  rounded-4 w-100 h-100">
         <!-- Chat Messages -->
-        <div id="messages" class="flex-grow-1 h-100 overflow-auto" style="scroll-behavior: smooth;">
+        <div id="messages" ref="messagesEl" class="flex-grow-1 h-100 overflow-auto" style="scroll-behavior: smooth;">
 
-            <div v-for="(message, i) in messages" :key="i">
+            <div v-for="message in visibleMessages" :key="message.index">
                 <div v-if="message.role === 'user'" class="d-flex mb-1 justify-content-end">
                     <div class="p-3 px-4 rounded-4 ms-5" id="usermessage">
                         <div class="text-break text-start message" v-html="md.render(message.content)"></div>
@@ -364,15 +81,15 @@ onMounted(async () => {
                     <div class="text-break text-start message" v-html="renderedMarkdown(message.content)"></div>
                     <!-- Action buttons (copy / retry) -->
                     <div v-if="!loading && isClipboardCopyingAvailable " class="d-flex message-actions">
-                        <span v-if="!justCopiedMsg " class="material-icons-outlined p-2 fs-5" role="button" title="Copia"
-                            @click="copyMessage(message.content)">
+                        <span v-if="copiedIndex !== message.index" class="material-icons-outlined p-2 fs-5" role="button" title="Copia"
+                            @click="copyMessage(message.index, message.content)">
                             content_copy
                         </span>
                         <span v-else class="material-icons-outlined p-2 fs-5" role="button" title="Copiato!">
                             check
                         </span>
-                        <span class="material-icons-outlined p-2 fs-5" role="button" title="Rigenera"
-                            @click="regenerateMessage(i)">
+                        <span v-if="message.index === lastIndex" class="material-icons-outlined p-2 fs-5" role="button" title="Rigenera"
+                            @click="chat.regenerate()">
                             refresh
                         </span>
                     </div>
@@ -395,7 +112,7 @@ onMounted(async () => {
                 <div class="status-indicator status-online"></div>
                 <small class="text-success fw-bold">AI PC Enabled</small>
                 <button class="btn btn-sm p-1 ms-2 refresh-btn" 
-                        @click="recheckLocalBackend" 
+                        @click="chat.recheckBackend()" 
                         title="Re-check local backend"
                         :disabled="checkingLocalBackend">
                     <span class="material-icons-outlined" style="font-size: 14px;">refresh</span>
@@ -430,12 +147,12 @@ onMounted(async () => {
                     
                     <button type="button"
                         class="btn btn-sm fs-4 text-black rounded rounded-4 custom-bg-primary px-5 py-3 fw-bold"
-                        @click="startAnalysisSTREAMED">
+                        @click="chat.analyze()">
                         Analyze
                     </button>
                 </div>
             </div>
-            <input v-model="userInput" v-else @keyup.enter="sendMessageSTREAMED" id="input"
+            <input v-model="userInput" v-else @keyup.enter="send" id="input"
                 class="flex-item border rounded px-3 py-2 mt-2 w-100 text-white custom-box" placeholder="Ask Anything!"
                 autocomplete="off" />
         </div>

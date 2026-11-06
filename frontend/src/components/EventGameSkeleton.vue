@@ -18,7 +18,7 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 // No script logic is needed for this simple skeleton component.
 </script>
 

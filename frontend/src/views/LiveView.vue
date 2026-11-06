@@ -1,141 +1,70 @@
-<script setup>
-import { onMounted, ref, nextTick, computed } from 'vue'
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
 import EventSection from '@/components/EventSection.vue'
+import { fetchRoundPgn } from '@/api/lichess'
+import { parseBroadcastInput, parseHeaders, splitPgns } from '@/lib/pgn'
 
-const eventId = ref('sO7W9Jje')      // Example tournament ID
-const roundId = ref('')              // Set directly or extract from URL
-const pgnListFeatured = ref([])
-const pgnListAsked = ref([])
-const loading = ref(false)
-const error = ref(null)
-const featuredEvent = ref(null)
-const isFeatureVisibile = ref(true)
-const isQueriedVisibile = ref(true)
+// Lichess broadcast round shown as "Featured Event" (a test round; empty it in production)
+const featuredEvent = ref(import.meta.env.VITE_FEATURED_EVENT_ID || 'bFcndX91')
+
+const roundId = ref('')
+const pgnListFeatured = ref<string[]>([])
+const pgnListAsked = ref<string[]>([])
+const loadingFeatured = ref(false)
+const loadingQueried = ref(false)
+const error = ref<string | null>(null)
 const searchHasHappened = ref(false)
 const searchInput = ref('')
 
-// Add refresh functions for each event section
-async function refreshQueriedEvent() {
-  if (roundId.value) {
-    const pgnAsked = await fetchPgn(roundId.value)
-    if (pgnAsked) {
-      pgnListAsked.value = splitPGNs(pgnAsked)
-    }
-  }
-}
+const loading = computed(() => loadingFeatured.value || loadingQueried.value)
 
-async function refreshFeaturedEvent() {
-  if (featuredEvent.value) {
-    await fetchPgnFeatured()
-  }
-}
-
-// Fetch tournament info and list of rounds
-async function fetchEvent() {
+/** Games of a round, or null (and `error` set) if they could not be fetched. */
+async function loadRound(id: string): Promise<string[] | null> {
   error.value = null
   try {
-    const res = await fetch(`https://lichess.org/api/broadcast/${eventId.value}`)
-    if (!res.ok) throw new Error('Event not found')
-    const data = await res.json()
-
-    // Pick default round if available
-    roundId.value = data.defaultRoundId || (data.rounds[0] && data.rounds[0].id) || ''
+    return splitPgns(await fetchRoundPgn(id))
   } catch (err) {
-    error.value = err.message
-  }
-}
-
-function splitPGNs(pgnText) {
-  //Takes the full PGN list from the Lichess API and splits it into individual games
-  return pgnText
-    .trim()
-    .split(/\n\n(?=\[Event )/) // lookahead for new game start
-}
-
-async function fetchQueriedPgn() {
-  if (searchInput.value.startsWith('http') || searchInput.value.includes('lichess.org')) {
-    setFromUrl(searchInput.value) // Extract IDs from URL
-  } else {
-    roundId.value = searchInput.value.trim()
-  }
-  if (roundId.value) {
-    const pgnAsked = await fetchPgn(roundId.value)
-    if (pgnAsked) {
-      pgnListAsked.value = splitPGNs(pgnAsked)
-      if (!searchHasHappened.value) {
-        searchHasHappened.value = true
-        await nextTick()
-
-      }
-    }
-  }
-}
-
-async function fetchPgnFeatured() {
-  if (!featuredEvent.value) return
-  const pgnFeatured = await fetchPgn(featuredEvent.value)
-  if (pgnFeatured !== null) {
-    pgnListFeatured.value = splitPGNs(pgnFeatured)
-  }
-}
-
-function cleanPgnFromComments(pgn) {
-  // Remove comments and NAGs from PGN for cleaner display
-  return pgn.replace(/\{[^}]*\}/g, '') // Remove comments {...}
-    .replace(/\$\d+/g, '')  // Remove NAGs like $1, $2, etc.
-    .trim()
-}
-
-// Fetch PGNs of a specific round
-async function fetchPgn(idToFetch) {
-  let pgnText = '';
-  loading.value = true
-  error.value = null
-  try {
-    const res = await fetch(`https://lichess.org/api/broadcast/round/${idToFetch}.pgn`)
-    if (!res.ok) throw new Error('Could not fetch PGN')
-    pgnText = await res.text()
-    pgnText = cleanPgnFromComments(pgnText)
-    loading.value = false
-    return pgnText
-  } catch (err) {
-    error.value = err.message
-    loading.value = false
+    error.value = err instanceof Error ? err.message : 'Could not fetch PGN'
     return null
   }
 }
 
-// Helper: If user pastes a broadcast URL, extract IDs
-function setFromUrl(url) {
-  try {
-    // Example URL: https://lichess.org/broadcast/knight-invitational/sO7W9Jje/eJLgkG7n
-    const parts = url.split('/')
-    eventId.value = parts[5] || ''
-    roundId.value = parts[6].split('#')[0] || ''
-  } catch (err) {
-    error.value = 'Invalid URL format'
-  }
+async function refreshQueriedEvent() {
+  if (!roundId.value) return
+  loadingQueried.value = true
+  const games = await loadRound(roundId.value)
+  if (games) pgnListAsked.value = games
+  loadingQueried.value = false
 }
 
-const featuredEventTitle = computed(() => {
-  if (!pgnListFeatured.value.length) return 'Loading Event Title...'
-  const match = pgnListFeatured.value[0].match(/\[Event "(.*?)"\]/)
-  return match ? match[1] : 'Event Name Unknown'
-})
+async function fetchQueriedPgn() {
+  const parsed = parseBroadcastInput(searchInput.value)
+  if (!parsed) {
+    error.value = 'Invalid Lichess broadcast URL or round ID'
+    return
+  }
+  roundId.value = parsed.roundId
+  searchHasHappened.value = true
+  await refreshQueriedEvent()
+}
 
-const queriedEventTitle = computed(() => {
-  if (!pgnListAsked.value.length) return 'Loading Event Title...'
-  const match = pgnListAsked.value[0].match(/\[Event "(.*?)"\]/)
-  return match ? match[1] : 'Event Name Unknown'
-})
+async function refreshFeaturedEvent() {
+  if (!featuredEvent.value) return
+  loadingFeatured.value = true
+  const games = await loadRound(featuredEvent.value)
+  if (games) pgnListFeatured.value = games
+  loadingFeatured.value = false
+}
 
-onMounted(() => {
-  // Automatically fetch event info on mount
-  featuredEvent.value = import.meta.env.FEATURED_EVENT_ID || 'bFcndX91' // Test featured event ID, should be null in production
-  fetchPgnFeatured();
-  //fetchTopEvents();
-})
+function eventTitle(games: string[]): string {
+  if (!games.length) return 'Loading Event Title...'
+  return parseHeaders(games[0]).Event || 'Event Name Unknown'
+}
 
+const featuredEventTitle = computed(() => eventTitle(pgnListFeatured.value))
+const queriedEventTitle = computed(() => eventTitle(pgnListAsked.value))
+
+onMounted(refreshFeaturedEvent)
 </script>
 
 <template>
@@ -171,14 +100,14 @@ onMounted(() => {
 
   <!-- Queried Event -->
 
-  <EventSection v-if="searchHasHappened && roundId && isQueriedVisibile" :title="queriedEventTitle || 'Your Query'"
-    :pgnList="pgnListAsked" :shouldRender="searchHasHappened" :onRefresh="refreshQueriedEvent" initiallyOpen id="queried-results" />
+  <EventSection v-if="searchHasHappened && roundId" :title="queriedEventTitle || 'Your Query'"
+    :pgnList="pgnListAsked" :loading="loadingQueried" @refresh="refreshQueriedEvent" initiallyOpen id="queried-results" />
 
 
   <div v-if="featuredEvent" class="fs-3 ms-5 m-4">Featured Event</div>
   <!-- Featured Event -->
   <EventSection v-if="featuredEvent" :title="featuredEventTitle || 'Featured Event'" :pgnList="pgnListFeatured"
-    :shouldRender="isFeatureVisibile" :onRefresh="refreshFeaturedEvent" initiallyOpen />
+    :loading="loadingFeatured" @refresh="refreshFeaturedEvent" initiallyOpen />
 
   <footer class="mb-5"></footer>
 </template>

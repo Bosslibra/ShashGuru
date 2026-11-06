@@ -56,8 +56,7 @@
 
     <!-- Error display -->
     <div v-if="error && enabled" class="error-container">
-      <i class="material-icons" @mouseover="isErrorTooltipVisible = true" @mouseleave="isErrorTooltipVisible = false"
-        style="color: #ff6b6b;">error</i>
+      <i class="material-icons" style="color: #ff6b6b;">error</i>
       <div class="error-tooltip bg-danger">
         {{ error }}
       </div>
@@ -65,245 +64,42 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, watch } from 'vue'
-import { EvaluationService } from '@/services/evaluationService.js'
-import { DEFAULT_DEPTH, DEFAULT_EVALUATION_ENABLED, DEFAULT_SHOW_LINES } from '@/constants/evaluation.js'
+<script setup lang="ts">
+import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
+import { formatScore, scoreToPercent } from '@/lib/evalFormat'
+import { useEvaluationStore } from '@/stores/evaluation'
+import { useSettingsStore } from '@/stores/settings'
 
-const emit = defineEmits(['evaluation-update', 'loading-update'])
+withDefaults(
+  defineProps<{
+    /** Which side is at the bottom of the board. */
+    boardOrientation?: 'white' | 'black'
+  }>(),
+  { boardOrientation: 'white' },
+)
 
-const props = defineProps({
-  fen: {
-    type: String,
-    required: true
-  },
-  depth: {
-    type: Number,
-    default: DEFAULT_DEPTH
-  },
-  enabled: {
-    type: Boolean,
-    default: DEFAULT_EVALUATION_ENABLED
-  },
-  boardOrientation: {
-    type: String,
-    default: 'white' // 'white' or 'black'
-  },
-  barHeight: {
-    type: Number,
-    default: 800
-  },
-  showLines: {
-    type: Number,
-    default: DEFAULT_SHOW_LINES
-  }
-})
+const { enabled } = storeToRefs(useSettingsStore())
+const { current: evaluation, loading, error } = storeToRefs(useEvaluationStore())
 
-const evaluation = ref(null)
-const loading = ref(false)
-const error = ref(null)
-const evaluationSideToMove = ref(true) // Store whose turn it was when evaluation was calculated
-const lastValidPercentage = ref(50) // Store the last valid percentage to avoid flipping during loading
-const isErrorTooltipVisible = ref(false)
+// Scores are relative to the side to move *of the evaluated position*, which may differ from the
+// position now on the board while a new evaluation is loading.
+const whiteToMove = computed(() => evaluation.value?.sideToMove !== 'black')
+const bestLine = computed(() => evaluation.value?.lines[0] ?? null)
 
-// Helper function to determine whose turn it is from FEN
-const isWhiteToMove = computed(() => {
-  if (!props.fen) return true
-  const fenParts = props.fen.split(' ')
-  return fenParts[1] === 'w'
-})
-
-// Convert evaluation score to percentage (0-100)
-const evaluationPercentage = computed(() => {
-  // If we're loading a new evaluation, keep showing the previous evaluation unchanged
-  if (loading.value && evaluation.value) {
-    return lastValidPercentage.value
-  }
-  
-  if (!evaluation.value) return 50 // Neutral position
-  
-  let score = 0
-  
-  if (evaluation.value.mate !== null) {
-    // Mate situation - set to extreme values
-    let mateValue = evaluation.value.mate
-    // If it was black to move when evaluation was calculated, flip the mate value to show from white's perspective
-    if (!evaluationSideToMove.value) {
-      mateValue = -mateValue
-    }
-    
-    if (mateValue > 0) {
-      return 100 // White mate - white advantage
-    } else {
-      return 0 // Black mate - black advantage
-    }
-  } else if (evaluation.value.score !== null) {
-    // Regular evaluation in centipawns
-    score = evaluation.value.score
-    // If it was black to move when evaluation was calculated, flip the score to show from white's perspective
-    if (!evaluationSideToMove.value) {
-      score = -score
-    }
-  } else if (evaluation.value.winprob !== null) {
-    // Use win probability if available
-    let winProb = evaluation.value.winprob
-    // If it was black to move when evaluation was calculated, flip the win probability to show from white's perspective
-    if (!evaluationSideToMove.value) {
-      winProb = 1.0 - winProb
-    }
-    return winProb * 100
-  }
-  
-  // Convert centipawn evaluation to percentage
-  // Use a sigmoid-like function to map scores to 0-100 range
-  // Score of 0 = 50%, positive scores favor white, negative favor black
-  const normalizedScore = Math.max(-1000, Math.min(1000, score))
-  return Math.max(5, Math.min(95, 50 + (normalizedScore / 20))) // Clamp between 5-95% for visibility
-})
-
-// Always show evaluation from White's POV, regardless of board orientation
+// Always show the evaluation from White's point of view, regardless of board orientation.
 const whitePercentage = computed(() => {
-  return evaluationPercentage.value
+  const ev = evaluation.value
+  if (!ev) return 50
+  if (ev.status === 'checkmate') return whiteToMove.value ? 0 : 100
+  if (!bestLine.value) return 50
+  return scoreToPercent(bestLine.value.score, whiteToMove.value, bestLine.value.winprob)
 })
 
 const blackPercentage = computed(() => 100 - whitePercentage.value)
 
-const lastValidEvaluation = ref('')
-
-const formatEvaluation = () => {
-  // If we're loading a new evaluation, keep showing the previous evaluation text unchanged
-  if (loading.value && evaluation.value) {
-    return lastValidEvaluation.value
-  }
-  
-  if (!evaluation.value) return ''
-  
-  if (evaluation.value.mate !== null) {
-    let mateValue = evaluation.value.mate
-    // If it was black to move when evaluation was calculated, flip the mate value to show from white's perspective
-    if (!evaluationSideToMove.value) {
-      mateValue = -mateValue
-    }
-    const mateSign = mateValue >= 0 ? '+' : ''
-    return `M${mateSign}${mateValue}`
-  } else if (evaluation.value.score !== null) {
-    let score = evaluation.value.score
-    // If it was black to move when evaluation was calculated, flip the score to show from white's perspective
-    if (!evaluationSideToMove.value) {
-      score = -score
-    }
-    const scoreInPawns = score / 100 // Convert centipawns to pawns
-    const sign = scoreInPawns >= 0 ? '+' : ''
-    return `${sign}${scoreInPawns.toFixed(1)}`
-  }
-  
-  return ''
-}
-
-const fetchEvaluation = async () => {
-  if (!props.fen || !props.enabled) {
-    evaluation.value = null
-    evaluationSideToMove.value = true
-    // Emit null evaluation and stop loading
-    emit('evaluation-update', {
-      bestMove: null,
-      evaluation: null,
-      depth: 0,
-      lines: []
-    })
-    emit('loading-update', false)
-    return
-  }
-  
-  try {
-    loading.value = true
-    error.value = null
-    
-    // Emit loading state
-    emit('loading-update', true)
-    
-    // Store whose turn it is BEFORE making the request
-    evaluationSideToMove.value = isWhiteToMove.value
-    
-    const result = await EvaluationService.fetchEvaluation(props.fen, props.depth, props.showLines)
-
-    if (result.fen === props.fen){
-      console.log('Evaluation:', result)
-      evaluation.value = result
-      
-      // Emit evaluation data
-      emit('evaluation-update', {
-        fen: result?.fen,
-        bestMove: result?.move || null,
-        evaluation: result?.score || result?.mate || null,
-        depth: props.depth,
-        lines: result?.lines || []
-      })
-    }
-  } catch (err) {
-    console.error('Error fetching evaluation:', err)
-    error.value = 'Failed to get evaluation'
-    evaluation.value = null
-    evaluationSideToMove.value = true
-    // Emit null evaluation on error
-    emit('evaluation-update', {
-      bestMove: null,
-      evaluation: null,
-      depth: 0,
-      lines: []
-    })
-  } finally {
-    if (evaluation.value?.fen === props.fen) {
-      loading.value = false
-      // Emit loading state
-      emit('loading-update', false)
-    }
-  }
-}
-
-// Watch for FEN changes and fetch new evaluation
-watch(() => props.fen, fetchEvaluation, { immediate: true })
-watch(() => props.depth, fetchEvaluation)
-watch(() => props.enabled, fetchEvaluation)
-watch(() => props.showLines, fetchEvaluation)
-watch(() => props.boardOrientation, () => {
-  // No need to refetch, just update the display
-})
-
-// Watch for evaluation changes to update the last valid percentage
-watch([evaluation, loading], ([newEval, isLoading]) => {
-  if (newEval && !isLoading) {
-    // Update the last valid percentage when we have a new evaluation and we're not loading
-    let score = 0
-    
-    if (newEval.mate !== null) {
-      let mateValue = newEval.mate
-      if (!evaluationSideToMove.value) {
-        mateValue = -mateValue
-      }
-      lastValidPercentage.value = mateValue > 0 ? 100 : 0
-      const mateSign = mateValue >= 0 ? '+' : ''
-      lastValidEvaluation.value = `M${mateSign}${mateValue}`
-    } else if (newEval.score !== null) {
-      score = newEval.score
-      if (!evaluationSideToMove.value) {
-        score = -score
-      }
-      const normalizedScore = Math.max(-1000, Math.min(1000, score))
-      lastValidPercentage.value = Math.max(5, Math.min(95, 50 + (normalizedScore / 20)))
-      const scoreInPawns = score / 100
-      const sign = scoreInPawns >= 0 ? '+' : ''
-      lastValidEvaluation.value = `${sign}${scoreInPawns.toFixed(1)}`
-    } else if (newEval.winprob !== null) {
-      let winProb = newEval.winprob
-      if (!evaluationSideToMove.value) {
-        winProb = 1.0 - winProb
-      }
-      lastValidPercentage.value = winProb * 100
-      lastValidEvaluation.value = '' // Win probability doesn't show in the text
-    }
-  }
-})
+const formatEvaluation = () =>
+  bestLine.value ? formatScore(bestLine.value.score, whiteToMove.value) : ''
 </script>
 
 <style scoped>

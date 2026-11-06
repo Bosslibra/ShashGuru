@@ -5,7 +5,7 @@ import os
 __this__file__path__ = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(__this__file__path__, "backend"))
 
-import LLMHandler
+from app.services import llm
 
 
 
@@ -51,9 +51,13 @@ def main():
 
     fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-    prompt = LLMHandler.create_prompt_single_engine(fen, 
-                                         bestmoves=[{"move": "e2e4", "score": 100}, {"move": "d2d4", "score": 50}, {"move": "g1f3", "score": 30}, {"move": "c2c4", "score": 20}],
-                                         ponder="e7e5")
+    # Engine lines in the format returned by POST /api/v1/evaluations
+    lines = [
+        {"move": "e2e4", "pv": ["e2e4", "e7e5", "g1f3"], "winprob": 56.0},
+        {"move": "d2d4", "pv": ["d2d4", "d7d5", "c2c4"], "winprob": 54.0},
+        {"move": "g1f3", "pv": ["g1f3", "d7d5", "d2d4"], "winprob": 53.0},
+    ]
+    prompt = llm.create_analysis_prompt(fen, lines)
 
     query_LLM(prompt, model=model)
 

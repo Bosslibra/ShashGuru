@@ -36,3 +36,5 @@ coverage
 ovms
 
 certbot
+# Vite cache
+.vite

@@ -21,7 +21,7 @@
 
         <!-- Board -->
         <div class="position-relative d-flex justify-content-center" style="height:250px; width:250px;">
-            <TheChessboard :board-config="boardConfig" @board-created="handleBoardCreated"
+            <TheChessboard :board-config="boardConfig"
                 style="height:250px; width:250px;" />
 
 
@@ -52,91 +52,76 @@
     </div>
 </template>
 
-<script setup>
-import { ref, onMounted, reactive } from 'vue'
-import { Chess } from 'chess.js';
-import { TheChessboard } from 'vue3-chessboard';
+<script setup lang="ts">
+import { computed, reactive } from 'vue'
+import { Chess } from 'chess.js'
+import { TheChessboard } from 'vue3-chessboard'
 import { useRouter } from 'vue-router'
-import 'vue3-chessboard/style.css';
-import { useChessStore } from '@/stores/useChessStore';
+import 'vue3-chessboard/style.css'
+import { STARTING_FEN } from '@/lib/fen'
+import { parseHeaders } from '@/lib/pgn'
+import { useGameStore } from '@/stores/game'
 
-const props = defineProps({
-    pgn: {
-        type: String,
-        default: ''
+const props = withDefaults(defineProps<{ pgn?: string }>(), { pgn: '' })
+
+const game = useGameStore()
+const router = useRouter()
+
+const metadata = computed(() => {
+    const tags = parseHeaders(props.pgn)
+    return {
+        whitePlayerTitle: tags.WhiteTitle ?? null,
+        whitePlayerName: tags.White ?? null,
+        whitePlayerRating: tags.WhiteElo ?? null,
+        blackPlayerTitle: tags.BlackTitle ?? null,
+        blackPlayerName: tags.Black ?? null,
+        blackPlayerRating: tags.BlackElo ?? null,
+        gameResult: tags.Result ?? null,
+        openingName: tags.Opening ?? null,
     }
 })
-const chessStore = useChessStore();
-const boardAPI = ref(null);
-const router = useRouter()
-const metadata = ref({})
-const fen = ref('')
+
+/** Final position of the game, or the starting position if the PGN cannot be read. */
+function finalFen(pgn: string): string {
+    try {
+        const chess = new Chess()
+        chess.loadPgn(pgn)
+        return chess.fen()
+    } catch {
+        return STARTING_FEN
+    }
+}
+
 const boardConfig = reactive({
-    fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // Starting FEN
+    fen: finalFen(props.pgn),
     viewOnly: true, // Make the board read-only
-    orientation: 'white', // Set initial orientation to black
-});
+    orientation: 'white' as const,
+})
 
 function navigateToAnalysis() {
-
-    chessStore.setPGN(props.pgn);
-    router.push({ name: 'home' });
-}
-
-function extractMetadata(pgn) {
-    const getTag = (tag) => {
-        const regex = new RegExp(`\\[${tag} "(.*?)"\\]`);
-        const match = pgn.match(regex);
-        return match ? match[1] : null;
-    };
-
-    metadata.value = {
-        whitePlayerTitle: getTag("WhiteTitle"),
-        whitePlayerName: getTag("White"),
-        whitePlayerRating: getTag("WhiteElo"),
-        blackPlayerTitle: getTag("BlackTitle"),
-        blackPlayerName: getTag("Black"),
-        blackPlayerRating: getTag("BlackElo"),
-        gameResult: getTag("Result"),
-        openingName: getTag("Opening"),
-    };
-}
-
-function pgnToFen(pgn) {
-    const chess = new Chess();
-    chess.loadPgn(pgn);
-    return chess.fen(); // final position
-}
-
-function resultFor(side) {
-    const res = metadata.value.gameResult;
-    if (!res || res === '*') return null;
-    if (res === '1-0') return side === 'white' ? '1' : '0';
-    if (res === '0-1') return side === 'white' ? '0' : '1';
-    if (res === '1/2-1/2') return '½';
-    return null;
-}
-
-function resultClass(result) {
-    if (result === '1') return 'text-victory ';
-    if (result === '0') return 'text-danger ';
-    return 'text-light ';
-}
-function handleBoardCreated(api) {
-    boardAPI.value = api;
-    
-}
-
-onMounted(() => {
-    if (props.pgn) {
-        fen.value = pgnToFen(props.pgn);
-        boardAPI.value.setPosition(fen.value);
-
+    try {
+        game.loadPgn(props.pgn)
+    } catch (error) {
+        alert(error instanceof Error ? error.message : 'PGN is invalid or empty.')
+        return
     }
-    extractMetadata(props.pgn)
+    router.push({ name: 'home' })
+}
 
-})
+function resultFor(side: 'white' | 'black'): string | null {
+    const res = metadata.value.gameResult
+    if (!res || res === '*') return null
+    if (res === '1-0') return side === 'white' ? '1' : '0'
+    if (res === '0-1') return side === 'white' ? '0' : '1'
+    if (res === '1/2-1/2') return '½'
+    return null
+}
 
+function resultClass(result: string | null): string {
+    if (result === '1') return 'text-victory '
+    if (result === '0') return 'text-danger '
+    return 'text-light '
+}
 </script>
 
 <style scoped>

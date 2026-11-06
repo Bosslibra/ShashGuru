@@ -45,83 +45,46 @@
     </div>
 </template>
 
-<script setup>
-import { onMounted, ref, watch } from 'vue'
+<script setup lang="ts">
+import { computed, ref } from 'vue'
 import EventGame from './EventGame.vue'
 import EventGameSkeleton from './EventGameSkeleton.vue'
 
+const BATCH = 5
 
-const props = defineProps({
-    title: { type: String, required: true },
-    pgnList: { type: Array, default: () => [] },
-    shouldRender: { type: Boolean, default: true },
-    initiallyOpen: { type: Boolean, default: false },
-    onRefresh: { type: Function, default: null }
-})
+const props = withDefaults(
+    defineProps<{
+        title: string
+        pgnList?: string[]
+        shouldRender?: boolean
+        initiallyOpen?: boolean
+        /** A fetch of the games is in progress. */
+        loading?: boolean
+    }>(),
+    { pgnList: () => [], shouldRender: true, initiallyOpen: false, loading: false },
+)
+
+const emit = defineEmits<{ refresh: [] }>()
+
 const isVisible = ref(props.initiallyOpen)
-const pgnListToRender = ref([])
-const isLoading = ref(false)
-const isRefreshing = ref(false)
+const visibleCount = ref(BATCH)
 
-function add5() {
-    setTimeout(() => {
-        const currentLength = pgnListToRender.value.length
-        const nextBatch = props.pgnList.slice(currentLength, currentLength + 5)
+// Skeletons only while there is nothing to show yet; afterwards the refresh button spins.
+const isLoading = computed(() => props.loading && props.pgnList.length === 0)
+const isRefreshing = computed(() => props.loading)
+const pgnListToRender = computed(() => props.pgnList.slice(0, visibleCount.value))
 
-        if (nextBatch.length > 0) {
-            pgnListToRender.value.push(...nextBatch)
-        }
-        isLoading.value = false
-        
-    }, 100)
-    
-}
-
-// Watch for changes to pgnList with debouncing
-watch(() => props.pgnList, (newPgnList, oldPgnList) => {
-
-    pgnListToRender.value = []
-    add5()
-}, { immediate: true })
-
-// Function to load more items manually
 const loadMore = () => {
-    if (isLoading.value) return
-
-    add5()
+    visibleCount.value += BATCH
 }
 
-// A simple function for the click handler
-const toggleVisibility = async () => {
-    isVisible.value = !isVisible.value;
-
-    if (isVisible.value) {
-        // Reset the loading state and start fetching data again
-       add5()
-    }
-    else {
-        pgnListToRender.value = []
-    }
-    isLoading.value = false
-};
-
-// Handle refresh button click
-const handleRefresh = async () => {
-    if (props.onRefresh && !isRefreshing.value) {
-        isRefreshing.value = true
-        try {
-            await props.onRefresh()
-        } catch (error) {
-            console.error('Error refreshing data:', error)
-        } finally {
-            isRefreshing.value = false
-        }
-    }
+const toggleVisibility = () => {
+    isVisible.value = !isVisible.value
 }
 
-onMounted(() => {
-    isLoading.value = true
-})
+const handleRefresh = () => {
+    if (!isRefreshing.value) emit('refresh')
+}
 </script>
 
 

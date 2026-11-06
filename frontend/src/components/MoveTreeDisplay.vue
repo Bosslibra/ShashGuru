@@ -3,7 +3,7 @@
     
 
     <!-- Display moves in traditional chess notation format with inline variations -->
-    <div v-if="props.node" class="moves-container">
+    <div class="moves-container">
       <div v-for="(moveItem, index) in displayItems" :key="moveItem.id || index" 
            :class="['move-item', { 'variation-item': moveItem.isVariation }]">
         
@@ -21,7 +21,7 @@
               'main-line': isMainLineMove(moveItem.whiteMove),
               'variation': !isMainLineMove(moveItem.whiteMove)
             }"
-            @click="$emit('nodeClicked', moveItem.whiteMove)"
+            @click="game.goTo(moveItem.whiteMove)"
             @contextmenu.prevent="showContextMenu($event, moveItem.whiteMove)"
           >
             <span class="move-icon" v-if="getShashinIcon(moveItem.whiteMove) || getMoveEvaluationIcon(moveItem.whiteMove)">
@@ -43,7 +43,7 @@
               'main-line': isMainLineMove(moveItem.blackMove),
               'variation': !isMainLineMove(moveItem.blackMove)
             }"
-            @click="$emit('nodeClicked', moveItem.blackMove)"
+            @click="game.goTo(moveItem.blackMove)"
             @contextmenu.prevent="showContextMenu($event, moveItem.blackMove)"
           >
             <span class="move-icon" v-if="getShashinIcon(moveItem.blackMove) || getMoveEvaluationIcon(moveItem.blackMove)">
@@ -61,19 +61,7 @@
         <div v-else-if="moveItem.type === 'variation'" class="variation-item">
           <div class="variation-line">
             <!-- <span class="variation-marker">(</span> -->
-            <MoveTreeDisplay 
-              :node="moveItem.variation"
-              :currentNode="currentNode"
-              :selectedPath="selectedPath"
-              :level="level + 1"
-              :isAnalysisMode="isAnalysisMode"
-              @nodeClicked="$emit('nodeClicked', $event)"
-              @addMove="$emit('addMove', $event)"
-              @setShashinType="$emit('setShashinType', $event)"
-              @setMoveEvaluation="$emit('setMoveEvaluation', $event)"
-              @promoteVariation="$emit('promoteVariation', $event)"
-              @deleteMove="$emit('deleteMove', $event)"
-            />
+            <MoveTreeDisplay :node="moveItem.variation" :level="level + 1" />
             <!-- <span class="variation-marker">)</span> -->
           </div>
         </div>
@@ -81,7 +69,7 @@
     </div>
 
     <!-- Analysis input for adding moves -->
-    <div v-if="isCurrentNodeInTree && isAnalysisMode" class="analysis-input mt-2">
+    <div v-if="level === 0 && isAnalysisMode" class="analysis-input mt-2">
       <div class="input-group input-group-sm">
         <input 
           v-model="newMove" 
@@ -240,436 +228,237 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue';
-import EngineLines from './EngineLines.vue';
+<script setup lang="ts">
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import type { MoveNode } from '@/lib/moveTree'
+import { useGameStore } from '@/stores/game'
 
-const props = defineProps({
-  node: {
-    type: Object,
-    required: true
-  },
-  currentNode: {
-    type: Object,
-    required: true
-  },
-  selectedPath: {
-    type: Array,
-    default: () => []
-  },
-  level: {
-    type: Number,
-    default: 0
-  },
-  isAnalysisMode: {
-    type: Boolean,
-    default: false
-  },
-  engineEvaluation: {
-    type: Object,
-    default: () => ({
-      bestMove: null,
-      evaluation: null,
-      depth: 0,
-      lines: []
-    })
-  },
-  isEvaluationLoading: {
-    type: Boolean,
-    default: false
-  }
-});
+interface MovePairItem {
+  type: 'move-pair'
+  id: string
+  moveNumber: number
+  whiteMove: MoveNode | null
+  blackMove: MoveNode | null
+  isVariation?: undefined
+}
 
-const emit = defineEmits(['nodeClicked', 'addMove', 'setShashinType', 'setMoveEvaluation', 'promoteVariation', 'deleteMove']);
+interface VariationItem {
+  type: 'variation'
+  id: string
+  variation: MoveNode
+  isVariation: true
+}
 
-const newMove = ref('');
-const moveInput = ref(null);
-const showMenu = ref(false);
-const menuPosition = ref({ x: 0, y: 0 });
-const selectedNode = ref(null);
-const contextMenu = ref(null);
+type DisplayItem = MovePairItem | VariationItem
+
+const SHASHIN_ICONS: Record<string, string> = {
+  'high-tal': '⬆️⚔️',
+  'high-middle-tal': '⚔️',
+  'middle-tal': '⚔️',
+  'middle-low-tal': '⬇️⚔️',
+  'low-tal': '⚔️',
+  'capablanca': '⚖️',
+  'high-petrosian': '⬆️🛡️',
+  'high-middle-petrosian': '⬆️🟰🛡️',
+  'middle-petrosian': '🟰🛡️',
+  'middle-low-petrosian': '🟰⬇️🛡️',
+  'low-petrosian': '⬇️🛡️',
+  'chaos-all': '🌀',
+}
+
+const MOVE_EVALUATION_ICONS: Record<string, string> = {
+  'brilliant': '✨',
+  'great': '❗',
+  'best': '✓',
+  'excellent': '⚡',
+  'good': '✓',
+  'book': '📖',
+  'inaccuracy': '⁈',
+  'mistake': '❓',
+  'blunder': '❌',
+  'missed-win': '💔',
+}
+
+const props = withDefaults(
+  defineProps<{
+    /** First node of the line displayed by this instance (the tree root, or a variation's first move). */
+    node: MoveNode
+    /** Nesting depth: 0 for the main tree. */
+    level?: number
+  }>(),
+  { level: 0 },
+)
+
+const game = useGameStore()
+
+const newMove = ref('')
+const moveInput = ref<HTMLInputElement | null>(null)
+const showMenu = ref(false)
+const menuPosition = ref({ x: 0, y: 0 })
+const selectedNode = shallowRef<MoveNode | null>(null)
+const contextMenu = ref<HTMLElement | null>(null)
+
+const isAnalysisMode = computed(() => game.analysisMode)
 
 // Section collapse states
 const sectionCollapsed = ref({
   moveEvaluation: true,
-  shashinType: true
-});
+  shashinType: true,
+})
 
-// Create display items that include both moves and variations in proper order
-const displayItems = computed(() => {
-  if (!props.node) return [];
-  
-  const items = [];
-  const startingMoveIndex = calculateStartingMoveIndex(props.node);
-  buildDisplayItems(props.node, items, startingMoveIndex);
-  return items;
-});
+// Moves and variations in display order
+const displayItems = computed<DisplayItem[]>(() => {
+  void game.version // the tree is mutated in place
+  const items: DisplayItem[] = []
+  buildDisplayItems(props.node, items, calculateStartingMoveIndex(props.node))
+  return items
+})
 
-// Check if current node is in this tree
-const isCurrentNodeInTree = computed(() => {
-  if (!props.currentNode || !props.node) return false;
-  return isNodeInTree(props.currentNode, props.node);
-});
-
-function calculateStartingMoveIndex(node) {
-  // If this is the root node or has no parent, start from 0
-  if (!node || !node.parent) return 0;
-  
-  // Use the FEN string to determine whose turn it is
-  // FEN format: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-  // The active color is the second field (w = white, b = black)
-  const parentFen = node.parent.fen;
-  if (!parentFen) return 0;
-  
-  const fenParts = parentFen.split(' ');
-  if (fenParts.length < 6) return 0;
-  
-  const activeColor = fenParts[1]; // 'w' for white, 'b' for black
-  const fullMoveNumber = parseInt(fenParts[5]) || 1;
-  
-  // Calculate the move index based on the position
-  // White's first move is index 0, black's first move is index 1, etc.
-  if (activeColor === 'w') {
-    return (fullMoveNumber - 1) * 2;
-  } else {
-    return (fullMoveNumber - 1) * 2 + 1;
-  }
+function calculateStartingMoveIndex(node: MoveNode): number {
+  // White's first move is index 0, black's first move is index 1, ...
+  if (!node.parent) return 0
+  const fenParts = node.parent.fen.split(' ')
+  if (fenParts.length < 6) return 0
+  const fullMoveNumber = parseInt(fenParts[5]) || 1
+  return (fullMoveNumber - 1) * 2 + (fenParts[1] === 'w' ? 0 : 1)
 }
 
-function buildDisplayItems(startNode, items, moveIndex) {
-  let current = startNode;
-  let currentMoveIndex = moveIndex;
-  
-  // Skip the root node if it has no move but has children
-  if (!current.move && current.mainLine) {
-    current = current.mainLine;
-  } else if (!current.move && current.children.length > 0) {
-    // Root node with no move but has children - start with first child
-    current = current.children[0];
-  }
-  
+function variationsOf(node: MoveNode): VariationItem[] {
+  return node.children
+    .filter((child) => child !== node.mainLine)
+    .map((variation) => ({ type: 'variation', id: `var-${variation.id}`, variation, isVariation: true }))
+}
+
+function buildDisplayItems(startNode: MoveNode, items: DisplayItem[], moveIndex: number) {
+  let current: MoveNode | null = startNode
+  let index = moveIndex
+
+  // Skip the root node: it has no move
+  if (!current.move) current = current.mainLine ?? current.children[0] ?? null
+
   while (current && current.move) {
-    const isWhiteMove = currentMoveIndex % 2 === 0;
-    const moveNumber = Math.floor(currentMoveIndex / 2) + 1;
-    
-    if (isWhiteMove) {
-      // Start a new move pair with white move
-      const blackMove = current.mainLine;
-      const movePair = {
-        type: 'move-pair',
-        id: `pair-${moveNumber}`,
-        moveNumber,
-        whiteMove: current,
-        blackMove: blackMove
-      };
-      items.push(movePair);
-      
-      // Add variations for white move
-      const whiteVariations = current.children.filter(child => child !== current.mainLine);
-      whiteVariations.forEach(variation => {
-        items.push({
-          type: 'variation',
-          id: `var-${variation.id}`,
-          variation: variation,
-          isVariation: true
-        });
-      });
-      
-      // Add variations for black move if it exists
-      if (blackMove) {
-        const blackVariations = blackMove.children.filter(child => child !== blackMove.mainLine);
-        blackVariations.forEach(variation => {
-          items.push({
-            type: 'variation',
-            id: `var-${variation.id}`,
-            variation: variation,
-            isVariation: true
-          });
-        });
-        
-        // Move to next after black move
-        current = blackMove.mainLine;
-        currentMoveIndex += 2;
-      } else {
-        // No black move, just increment by 1
-        current = null;
-        currentMoveIndex += 1;
-      }
+    const moveNumber = Math.floor(index / 2) + 1
+
+    if (index % 2 === 0) {
+      // A white move, paired with the black reply
+      const blackMove: MoveNode | null = current.mainLine
+      items.push({ type: 'move-pair', id: `pair-${moveNumber}`, moveNumber, whiteMove: current, blackMove })
+      items.push(...variationsOf(current))
+      if (blackMove) items.push(...variationsOf(blackMove))
+      current = blackMove?.mainLine ?? null
+      index += blackMove ? 2 : 1
     } else {
-      // This is a black move starting a variation
-      const movePair = {
-        type: 'move-pair',
-        id: `pair-${moveNumber}`,
-        moveNumber,
-        whiteMove: null,
-        blackMove: current
-      };
-      items.push(movePair);
-      
-      // Add variations for this black move
-      const variations = current.children.filter(child => child !== current.mainLine);
-      variations.forEach(variation => {
-        items.push({
-          type: 'variation',
-          id: `var-${variation.id}`,
-          variation: variation,
-          isVariation: true
-        });
-      });
-      
-      current = current.mainLine;
-      currentMoveIndex += 1;
+      // A black move starting a variation
+      items.push({ type: 'move-pair', id: `pair-${moveNumber}`, moveNumber, whiteMove: null, blackMove: current })
+      items.push(...variationsOf(current))
+      current = current.mainLine
+      index += 1
     }
   }
 }
 
-function getMainLineMoves(startNode) {
-  const moves = [];
-  let current = startNode;
-  
-  // Skip the root node if it has no move
-  if (!current.move && current.mainLine) {
-    current = current.mainLine;
-  }
-  
-  while (current && current.move) {
-    moves.push(current);
-    current = current.mainLine;
-  }
-  
-  return moves;
+function isSelectedMove(moveNode: MoveNode | null): boolean {
+  return !!moveNode && game.currentNode.id === moveNode.id
 }
 
-function isNodeInTree(nodeToFind, treeRoot) {
-  if (!nodeToFind || !treeRoot) return false;
-  if (nodeToFind.id === treeRoot.id) return true;
-  
-  if (treeRoot.children) {
-    for (const child of treeRoot.children) {
-      if (isNodeInTree(nodeToFind, child)) {
-        return true;
-      }
-    }
-  }
-  
-  return false;
+function isMainLineMove(moveNode: MoveNode | null): boolean {
+  if (!moveNode || !moveNode.parent) return true
+  return moveNode.parent.mainLine === moveNode
 }
 
-function isSelectedMove(moveNode) {
-  return props.currentNode && moveNode && props.currentNode.id === moveNode.id;
+function handleAddMove() {
+  const text = newMove.value.trim()
+  if (!text) return
+  game.play(text)
+  newMove.value = ''
 }
 
-function isMainLineMove(moveNode) {
-  if (!moveNode || !moveNode.parent) return true;
-  return moveNode.parent.mainLine === moveNode;
-}
+function showContextMenu(event: MouseEvent, node: MoveNode) {
+  selectedNode.value = node
+  showMenu.value = true
+  sectionCollapsed.value = { moveEvaluation: true, shashinType: true }
+  menuPosition.value = { x: event.clientX, y: event.clientY }
 
-async function handleAddMove() {
-  if (newMove.value.trim()) {
-    emit('addMove', newMove.value.trim());
-    newMove.value = '';
-  }
-}
-
-
-function showContextMenu(event, node) {
-  selectedNode.value = node;
-  showMenu.value = true;
-  
-  // Reset section collapsed states when opening menu
-  sectionCollapsed.value = {
-    moveEvaluation: true,
-    shashinType: true
-  };
-  
-  // Position the context menu
-  const rect = event.target.getBoundingClientRect();
-  menuPosition.value = {
-    x: event.clientX,
-    y: event.clientY
-  };
-  
-  // Ensure menu stays within viewport
+  // Keep the menu inside the viewport
   nextTick(() => {
-    if (contextMenu.value) {
-      const menuRect = contextMenu.value.getBoundingClientRect();
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      
-      if (menuPosition.value.x + menuRect.width > viewportWidth) {
-        menuPosition.value.x = viewportWidth - menuRect.width - 10;
-      }
-      
-      if (menuPosition.value.y + menuRect.height > viewportHeight) {
-        menuPosition.value.y = viewportHeight - menuRect.height - 10;
-      }
+    const menu = contextMenu.value
+    if (!menu) return
+    const rect = menu.getBoundingClientRect()
+    if (menuPosition.value.x + rect.width > window.innerWidth) {
+      menuPosition.value.x = window.innerWidth - rect.width - 10
     }
-  });
+    if (menuPosition.value.y + rect.height > window.innerHeight) {
+      menuPosition.value.y = window.innerHeight - rect.height - 10
+    }
+  })
 }
 
-function setShashinType(type) {
-  if (selectedNode.value) {
-    emit('setShashinType', { node: selectedNode.value, type });
-  }
-  hideContextMenu();
+function setShashinType(type: string | null) {
+  if (selectedNode.value) game.setShashinType(selectedNode.value, type)
+  hideContextMenu()
 }
 
-function setMoveEvaluation(type) {
-  if (selectedNode.value) {
-    emit('setMoveEvaluation', { node: selectedNode.value, type });
-  }
-  hideContextMenu();
+function setMoveEvaluation(type: string | null) {
+  if (selectedNode.value) game.setMoveEvaluation(selectedNode.value, type)
+  hideContextMenu()
 }
 
-function toggleSection(sectionName) {
-  sectionCollapsed.value[sectionName] = !sectionCollapsed.value[sectionName];
+function toggleSection(sectionName: 'moveEvaluation' | 'shashinType') {
+  sectionCollapsed.value[sectionName] = !sectionCollapsed.value[sectionName]
 }
 
 function hideContextMenu() {
-  showMenu.value = false;
-  selectedNode.value = null;
+  showMenu.value = false
+  selectedNode.value = null
 }
 
-function getShashinIcon(node) {
-  if (!node) return '';
-
-  const shashinIcons = {
-      'high-tal': '⬆️⚔️',
-      'high-middle-tal': '⚔️',
-      'middle-tal': '⚔️',
-      'middle-low-tal': '⬇️⚔️',
-      'low-tal': '⚔️',
-      'capablanca': '⚖️',
-      'high-petrosian': '⬆️🛡️',
-      'high-middle-petrosian': '⬆️🟰🛡️',
-      'middle-petrosian': '🟰🛡️',
-      'middle-low-petrosian': '🟰⬇️🛡️',
-      'low-petrosian': '⬇️🛡️',
-      'chaos-all': '🌀'
-    };
-  
-  // If manually set, use that
-  if (node.shashinType) {
-    return shashinIcons[node.shashinType] || '';
-  }
-  
-  // Auto-detect from evaluation if available
-  if (node.evaluation) {
-    const autoType = getAutoShashinType(node.evaluation);
-    if (autoType) {
-      return shashinIcons[autoType] || '';
-    }
-  }
-  
-  return '';
+function getShashinIcon(node: { shashinType?: string | null } | null): string {
+  return (node?.shashinType && SHASHIN_ICONS[node.shashinType]) || ''
 }
 
-function getAutoShashinType(evaluation) {
-  if (!evaluation) return null;
-  // TODO: Implement auto-detection logic
-  return null; // Placeholder for now
+/** Accepts a move node, or directly an evaluation type (used by the context menu entries). */
+function getMoveEvaluationIcon(nodeOrType: { moveEvaluation?: string | null } | string | null): string {
+  const type = typeof nodeOrType === 'string' ? nodeOrType : nodeOrType?.moveEvaluation
+  return (type && MOVE_EVALUATION_ICONS[type]) || ''
 }
 
-function getMoveEvaluationIcon(node) {
-  if (!node || !node.moveEvaluation) return '';
+// A variation can be promoted unless it already is on the main line
+const canPromoteToMainLine = computed(() => !!selectedNode.value && !!selectedNode.value.parent && !selectedNode.value.isOnMainLinePath())
 
-  const evaluationIcons = {
-    'brilliant': '✨',
-    'great': '❗',
-    'best': '✓',
-    'excellent': '⚡',
-    'good': '✓',
-    'book': '📖',
-    'inaccuracy': '⁈',
-    'mistake': '❓',
-    'blunder': '❌',
-    'missed-win': '💔'
-  };
-
-  return evaluationIcons[node.moveEvaluation] || '';
-}
-
-// Check if the selected node can be promoted to main line
-const canPromoteToMainLine = computed(() => {
-  if (!selectedNode.value || !selectedNode.value.parent) return false;
-  
-  // Can only promote if this node is not already the main line
-  const isCurrentlyMainLine = selectedNode.value.parent.mainLine === selectedNode.value;
-  
-  // Also check if this node is part of the main line path from root
-  const isOnMainLinePath = isNodeOnMainLinePath(selectedNode.value);
-  
-  // Can promote if it's either not the direct main line OR not on the main line path
-  const canPromote = !isCurrentlyMainLine || !isOnMainLinePath;
-  
-  return canPromote;
-});
-
-// Check if a node is on the main line path from root to end
-function isNodeOnMainLinePath(node) {
-  if (!node || !node.parent) return false;
-  
-  // Traverse up to find the root
-  let current = node;
-  while (current.parent) {
-    // If at any point this node is not the main line of its parent,
-    // then it's not on the main line path
-    if (current.parent.mainLine !== current) {
-      return false;
-    }
-    current = current.parent;
-  }
-  
-  return true;
-}
+// The root (the node with no move) cannot be deleted
+const canDeleteMove = computed(() => !!selectedNode.value?.move)
 
 function promoteToMainLine() {
-  if (selectedNode.value && canPromoteToMainLine.value) {
-    emit('promoteVariation', selectedNode.value);
-  }
-  hideContextMenu();
+  if (selectedNode.value && canPromoteToMainLine.value) game.promote(selectedNode.value)
+  hideContextMenu()
 }
-
-// Check if the selected node can be deleted (not the root node)
-const canDeleteMove = computed(() => {
-  if (!selectedNode.value) return false;
-  
-  // Can't delete the root node (node with no move)
-  return !!selectedNode.value.move;
-});
 
 function deleteMove() {
-  if (selectedNode.value && canDeleteMove.value) {
-    emit('deleteMove', selectedNode.value);
-  }
-  hideContextMenu();
+  if (selectedNode.value && canDeleteMove.value) game.remove(selectedNode.value)
+  hideContextMenu()
 }
 
-// Click outside to close context menu
-function handleClickOutside(event) {
-  if (showMenu.value && contextMenu.value && !contextMenu.value.contains(event.target)) {
-    hideContextMenu();
+// Click outside to close the context menu
+function handleClickOutside(event: MouseEvent) {
+  if (showMenu.value && contextMenu.value && !contextMenu.value.contains(event.target as Node)) {
+    hideContextMenu()
   }
 }
 
-// Add event listener for clicking outside
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside);
-});
+onMounted(() => document.addEventListener('click', handleClickOutside))
+onUnmounted(() => document.removeEventListener('click', handleClickOutside))
 
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
-});
-
-// Focus input when analysis mode is enabled and this node is current
-watch(() => [isCurrentNodeInTree.value, props.isAnalysisMode], async ([isInTree, analysisMode]) => {
-  if (isInTree && analysisMode) {
-    await nextTick();
-    if (moveInput.value) {
-      moveInput.value.focus();
+// Focus the "add move" box when analysis mode is switched on
+watch(
+  () => game.analysisMode,
+  async (analysisMode) => {
+    if (analysisMode && props.level === 0) {
+      await nextTick()
+      moveInput.value?.focus()
     }
-  }
-}, { immediate: true });
+  },
+  { immediate: true },
+)
 </script>
 
 <style scoped>
