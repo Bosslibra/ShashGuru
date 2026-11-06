@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useTranslation } from 'i18next-vue'
+import { CircleAlert, Search } from '@lucide/vue'
 import EventSection from '@/components/EventSection.vue'
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
+import { Spinner } from '@/components/ui/spinner'
 import { fetchRoundPgn } from '@/api/lichess'
 import { parseBroadcastInput, parseHeaders, splitPgns } from '@/lib/pgn'
+
+const { t } = useTranslation()
 
 // Lichess broadcast round shown as "Featured Event" (a test round; empty it in production)
 const featuredEvent = ref(import.meta.env.VITE_FEATURED_EVENT_ID || 'bFcndX91')
@@ -12,6 +18,8 @@ const pgnListFeatured = ref<string[]>([])
 const pgnListAsked = ref<string[]>([])
 const loadingFeatured = ref(false)
 const loadingQueried = ref(false)
+const loadedFeatured = ref(false)
+const loadedQueried = ref(false)
 const error = ref<string | null>(null)
 const searchHasHappened = ref(false)
 const searchInput = ref('')
@@ -24,7 +32,7 @@ async function loadRound(id: string): Promise<string[] | null> {
   try {
     return splitPgns(await fetchRoundPgn(id))
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Could not fetch PGN'
+    error.value = err instanceof Error ? err.message : t('errors.fetchPgn')
     return null
   }
 }
@@ -35,12 +43,13 @@ async function refreshQueriedEvent() {
   const games = await loadRound(roundId.value)
   if (games) pgnListAsked.value = games
   loadingQueried.value = false
+  loadedQueried.value = true
 }
 
 async function fetchQueriedPgn() {
   const parsed = parseBroadcastInput(searchInput.value)
   if (!parsed) {
-    error.value = 'Invalid Lichess broadcast URL or round ID'
+    error.value = t('errors.invalidBroadcast')
     return
   }
   roundId.value = parsed.roundId
@@ -54,87 +63,85 @@ async function refreshFeaturedEvent() {
   const games = await loadRound(featuredEvent.value)
   if (games) pgnListFeatured.value = games
   loadingFeatured.value = false
+  loadedFeatured.value = true
 }
 
-function eventTitle(games: string[]): string {
-  if (!games.length) return 'Loading Event Title...'
-  return parseHeaders(games[0]).Event || 'Event Name Unknown'
+function eventTitle(games: string[], loaded: boolean): string {
+  if (!games.length) return loaded ? t('live.unavailable') : t('live.loadingTitle')
+  return parseHeaders(games[0]).Event || t('live.unknownEvent')
 }
 
-const featuredEventTitle = computed(() => eventTitle(pgnListFeatured.value))
-const queriedEventTitle = computed(() => eventTitle(pgnListAsked.value))
+const featuredEventTitle = computed(() => eventTitle(pgnListFeatured.value, loadedFeatured.value))
+const queriedEventTitle = computed(() => eventTitle(pgnListAsked.value, loadedQueried.value))
 
 onMounted(refreshFeaturedEvent)
 </script>
 
 <template>
+  <main class="mx-auto flex w-[calc(100%-2rem)] max-w-[1400px] flex-col gap-(--gap) py-(--pad)">
+    <!-- Search -->
+    <section>
+      <h2 class="mb-5 text-center text-2xl font-bold text-foreground md:text-3xl">{{ t('live.title') }}</h2>
 
-  <div class="p-4 mx-5">
-    <div class="container py-4 w-100">
-      <h2 class="text-center text-light mb-4 mx">Events and Broadcasts</h2>
+      <InputGroup id="search-group" class="h-11 rounded-full border-olive/70">
+        <InputGroupAddon>
+          <Search class="ml-1" aria-hidden="true" />
+        </InputGroupAddon>
+        <InputGroupInput
+          id="input-event"
+          v-model="searchInput"
+          :placeholder="t('live.searchPlaceholder')"
+          :aria-label="t('live.searchLabel')"
+          autocomplete="off"
+          @keyup.enter="fetchQueriedPgn"
+        />
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton
+            id="search-button"
+            variant="default"
+            size="sm"
+            class="rounded-full"
+            :disabled="loading"
+            :aria-label="t('live.search')"
+            @click="fetchQueriedPgn"
+          >
+            <Spinner v-if="loading" aria-hidden="true" />
+            <Search v-else aria-hidden="true" />
+            <span class="hidden sm:inline">{{ t('live.search') }}</span>
+          </InputGroupButton>
+        </InputGroupAddon>
+      </InputGroup>
 
-      <!-- Search Bar -->
-      <div id="search-group" class="input-group rounded-pill  p-1">
-        <input id="input-event" type="text" class="form-control outline-none rounded-pill me-1" v-model="searchInput"
-          @keyup.enter="fetchQueriedPgn" placeholder="Paste Lichess Broadcast URL or Event ID..." />
+      <p id="helper" class="mt-2 px-2 text-sm [overflow-wrap:anywhere] text-muted-foreground">{{ t('live.example') }}</p>
 
-        <!-- Search Button -->
-        <button id="search-button" class="btn rounded-circle" type="button" @click="fetchQueriedPgn"
-          :disabled="loading">
-          <span class="material-icons mt-1" v-if="!loading">search</span>
-          <span v-else class="spinner-border spinner-border-sm"></span>
-        </button>
-      </div>
+      <p v-if="error" class="text-danger mt-3 flex items-center gap-2 text-sm text-destructive" role="alert">
+        <CircleAlert class="size-4 shrink-0" aria-hidden="true" />{{ error }}
+      </p>
+    </section>
 
-      <!-- Helper text -->
-      <small id="helper" class="form-text  mt-2 ms-1">
-        Example: https://lichess.org/broadcast/.../sO7W9Jje/eJLgkG7n or eJLgkG7n
-      </small>
+    <!-- Queried event -->
+    <EventSection
+      v-if="searchHasHappened && roundId"
+      id="queried-results"
+      :title="queriedEventTitle || t('live.yourQuery')"
+      :pgn-list="pgnListAsked"
+      :loading="loadingQueried"
+      :empty-text="loadedQueried ? t('live.noGames') : ''"
+      initially-open
+      @refresh="refreshQueriedEvent"
+    />
 
-      <!-- Error Message -->
-      <div v-if="error" class="text-danger mt-3">
-        ⚠️ {{ error }}
-      </div>
-    </div>
-  </div>
-
-  <!-- Queried Event -->
-
-  <EventSection v-if="searchHasHappened && roundId" :title="queriedEventTitle || 'Your Query'"
-    :pgnList="pgnListAsked" :loading="loadingQueried" @refresh="refreshQueriedEvent" initiallyOpen id="queried-results" />
-
-
-  <div v-if="featuredEvent" class="fs-3 ms-5 m-4">Featured Event</div>
-  <!-- Featured Event -->
-  <EventSection v-if="featuredEvent" :title="featuredEventTitle || 'Featured Event'" :pgnList="pgnListFeatured"
-    :loading="loadingFeatured" @refresh="refreshFeaturedEvent" initiallyOpen />
-
-  <footer class="mb-5"></footer>
+    <!-- Featured event -->
+    <template v-if="featuredEvent">
+      <h3 class="fs-3 mt-2 text-xl font-semibold text-foreground">{{ t('live.featured') }}</h3>
+      <EventSection
+        :title="featuredEventTitle || t('live.featured')"
+        :pgn-list="pgnListFeatured"
+        :loading="loadingFeatured"
+        :empty-text="loadedFeatured ? t('live.noGames') : ''"
+        initially-open
+        @refresh="refreshFeaturedEvent"
+      />
+    </template>
+  </main>
 </template>
-
-
-<style scoped>
-#search-group,
-#input-event {
-  background-color: #232323 !important;
-  border: none !important;
-  color: white;
-  outline: none;
-  box-shadow: none;
-}
-
-#search-group {
-  border: 1px solid #aaa23a !important;
-}
-
-#helper,
-#input-event::placeholder {
-  color: #ebebeba3;
-}
-
-#search-button {
-  background-color: #aaa23a !important;
-  border: 1px solid #aaa23a !important;
-  color: white;
-}
-</style>

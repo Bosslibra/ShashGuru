@@ -1,3 +1,15 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
+
+@import './tokens.css';
+@import './theme.css';
 @import './base.css';
-
-
+@import './signature.css';
+@import './directions/scoresheet.css';
+@import './directions/tavolo.css';
+@import './directions/editoriale.css';
+@import './board.css';
+@import './prose.css';
+@import './utilities.css';

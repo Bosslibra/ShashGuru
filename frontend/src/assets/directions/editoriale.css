@@ -1,0 +1,81 @@
+/* Direction 3: EDITORIALE. Typography first, almost no boxes: dividers instead of borders, airy spacing. */
+:root[data-dir='editoriale'] {
+  --radius: 3px;
+
+  --panel-bg: transparent;
+  --panel-border: transparent;
+  --panel-divider: var(--border);
+  --panel-shadow: none;
+
+  --label-transform: none;
+  --label-size: 12px;
+  --label-tracking: 0.01em;
+  --label-weight: 500;
+  --label-color: var(--muted-foreground);
+
+  --checker-opacity: 0;
+  --texture: none;
+
+  --pad: 28px;
+  --pad-sm: 14px;
+  --gap: 28px;
+}
+
+/* Tabs are plain text; the active one is underlined with a lime hairline */
+:root[data-dir='editoriale'] [data-slot='tabs-list'] {
+  background: transparent;
+  padding: 0;
+  height: auto;
+  gap: 20px;
+  justify-content: flex-start;
+  border-bottom: 1px solid var(--border);
+}
+:root[data-dir='editoriale'] [data-slot='tabs-trigger'] {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 10px 0;
+  height: auto;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+:root[data-dir='editoriale'] [data-slot='tabs-trigger']::after {
+  inset-inline: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--lime);
+  opacity: 0;
+}
+:root[data-dir='editoriale'] [data-slot='tabs-trigger'][data-state='active'],
+:root[data-dir='editoriale'] [data-slot='tabs-trigger'][data-active] {
+  color: var(--foreground);
+}
+:root[data-dir='editoriale'] [data-slot='tabs-trigger'][data-state='active']::after,
+:root[data-dir='editoriale'] [data-slot='tabs-trigger'][data-active]::after {
+  opacity: 1;
+}
+
+/* Flat buttons and quiet chips */
+:root[data-dir='editoriale'] [data-slot='button'][data-variant='default'] {
+  box-shadow: none;
+}
+:root[data-dir='editoriale'] [data-slot='badge'] {
+  border-radius: var(--radius);
+}
+
+/* Header links: quiet text, lime hairline for the active one */
+:root[data-dir='editoriale'] [data-slot='nav-link'] {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+:root[data-dir='editoriale'] [data-slot='nav-link'][aria-current='page']::after {
+  content: '';
+  position: absolute;
+  inset-inline: 12px;
+  bottom: 2px;
+  height: 1px;
+  background: var(--lime);
+}

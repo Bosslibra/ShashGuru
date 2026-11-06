@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { getStyles, isLocalBackendAvailable, streamAnalysis, streamChat } from '@/api/backend'
 import { LOCAL_BASE, REMOTE_BASE, isAbortError } from '@/api/http'
+import i18next from '@/i18n'
 import { useGameStore } from '@/stores/game'
 import { useSettingsStore } from '@/stores/settings'
 import type { StreamEvent, StyleInfo } from '@/types/api'
@@ -89,7 +90,8 @@ export const useChatStore = defineStore('chat', () => {
     if (isAbortError(e)) return
     console.error('Streaming error:', e)
     target.error = true
-    target.content = e instanceof Error && e.message ? `Error: ${e.message}` : `Error: unable to fetch ${what}.`
+    // Keep the raw detail only; the UI shows a translated title and a retry button.
+    target.content = e instanceof Error && e.message ? e.message : i18next.t('chat.fetchFailed', { what })
   }
 
   function newAssistantEntry(): ChatEntry {
@@ -108,7 +110,7 @@ export const useChatStore = defineStore('chat', () => {
         target,
       )
     } catch (e) {
-      fail(target, e, 'analysis')
+      fail(target, e, i18next.t('chat.whatAnalysis'))
     } finally {
       if (!signal.aborted) loading.value = false
     }
@@ -134,7 +136,7 @@ export const useChatStore = defineStore('chat', () => {
         target,
       )
     } catch (e) {
-      fail(target, e, 'response')
+      fail(target, e, i18next.t('chat.whatResponse'))
     } finally {
       if (!signal.aborted) loading.value = false
     }
@@ -162,6 +164,6 @@ export const useChatStore = defineStore('chat', () => {
   return {
     messages, visibleMessages, loading, toAnalyse, style, styles,
     checkingLocalBackend, isLocalBackendAvailable: isLocalBackendAvailable_,
-    init, recheckBackend, analyze, ask, regenerate,
+    backend, init, recheckBackend, analyze, ask, regenerate,
   }
 })

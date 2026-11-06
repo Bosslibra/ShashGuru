@@ -1,0 +1,169 @@
+{
+  "nav": {
+    "home": "HOME",
+    "live": "LIVE",
+    "about": "ABOUT",
+    "toggle": "Toggle navigation",
+    "language": "Language"
+  },
+  "common": {
+    "close": "Close",
+    "refresh": "Refresh",
+    "retry": "Retry",
+    "on": "ON",
+    "off": "OFF",
+    "white": "White",
+    "black": "Black"
+  },
+  "errors": {
+    "invalidPgn": "PGN is invalid or empty.",
+    "invalidFen": "Invalid FEN",
+    "invalidBroadcast": "Invalid Lichess broadcast URL or round ID",
+    "fetchPgn": "Could not fetch PGN"
+  },
+  "home": {
+    "tabs": {
+      "label": "Analysis panels",
+      "moves": "Moves",
+      "chat": "AI Chat"
+    },
+    "whiteLabel": "White:",
+    "blackLabel": "Black:",
+    "analysisBadge": "Analysis",
+    "toolbar": {
+      "first": "Go to first move",
+      "back": "Previous move",
+      "forward": "Next move",
+      "last": "Go to last move",
+      "toggleAnalysis": "Toggle Analysis Mode (Shift+Enter)",
+      "fetchEvaluations": "Fetch Evaluations"
+    },
+    "movesHeader": "Moves",
+    "emptyMoves": "Load a PGN or make moves on the board to begin analysis",
+    "emptyAnalysis": "Analysis mode enabled - make moves on the board or use arrow keys to navigate"
+  },
+  "board": {
+    "controls": "Board Controls",
+    "flip": "Flip Board",
+    "start": "Starting Position",
+    "settings": "Settings",
+    "whiteToPlay": "White to play",
+    "blackToPlay": "Black to play",
+    "whiteWins": "White wins by checkmate!",
+    "blackWins": "Black wins by checkmate!",
+    "fenPlaceholder": "Enter FEN (updates automatically)",
+    "fenLabel": "FEN Input",
+    "pgnPlaceholder": "Enter PGN and press Enter",
+    "pgnLabel": "PGN Input"
+  },
+  "engine": {
+    "title": "Engine Analysis",
+    "depth": "Depth {{depth}}",
+    "analyzing": "Analyzing...",
+    "off": "Engine analysis is off. Turn it on in Settings to see the best lines.",
+    "failed": "Engine evaluation failed.",
+    "noLines": "No engine lines for this position."
+  },
+  "settings": {
+    "title": "Evaluation Settings",
+    "engineAnalysis": "Engine Analysis",
+    "depth": "Depth: {{value}}",
+    "showBestMove": "Show Best Move Arrow",
+    "showLines": "Show Lines: {{value}}",
+    "reset": "Reset to Default",
+    "description": "Engine and evaluation preferences."
+  },
+  "moveTree": {
+    "autoDetected": "Auto-detected from evaluation",
+    "addMovePlaceholder": "Add move (e.g., Nf3, e4)",
+    "addMove": "Add move",
+    "menu": {
+      "title": "Move Annotations",
+      "promote": "Promote to Main Line",
+      "delete": "Delete Move",
+      "moveEvaluation": "Move Evaluation",
+      "clearEvaluation": "Clear Evaluation",
+      "shashinType": "Shashin Position Type",
+      "clearShashin": "Clear Shashin Type",
+      "groups": {
+        "tal": "Tal (Attack)",
+        "capablanca": "Capablanca (Strategic)",
+        "petrosian": "Petrosian (Defense)",
+        "chaos": "Chaos"
+      }
+    },
+    "eval": {
+      "brilliant": "Brilliant",
+      "great": "Great",
+      "best": "Best",
+      "excellent": "Excellent",
+      "good": "Good",
+      "book": "Book Move",
+      "inaccuracy": "Inaccuracy",
+      "mistake": "Mistake",
+      "blunder": "Blunder",
+      "missed-win": "Missed Win"
+    },
+    "shashin": {
+      "high-tal": "High Tal",
+      "high-middle-tal": "High-Middle Tal",
+      "middle-tal": "Middle Tal",
+      "middle-low-tal": "Middle-Low Tal",
+      "low-tal": "Low Tal",
+      "capablanca": "Capablanca",
+      "high-petrosian": "High Petrosian",
+      "high-middle-petrosian": "High-Middle Petrosian",
+      "middle-petrosian": "Middle Petrosian",
+      "middle-low-petrosian": "Middle-Low Petrosian",
+      "low-petrosian": "Low Petrosian",
+      "chaos-all": "Total Chaos"
+    }
+  },
+  "chat": {
+    "you": "You",
+    "ai": "AI:",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "regenerate": "Regenerate",
+    "checkingBackend": "Checking local AI PC...",
+    "backendEnabled": "AI PC Enabled",
+    "recheckBackend": "Re-check local backend",
+    "disclaimer": "AI-generated content may contain errors or inaccuracies. Please verify important information.",
+    "style": "Analysis Style",
+    "analyze": "Analyze",
+    "placeholder": "Ask Anything!",
+    "inputLabel": "Ask a question about the position",
+    "errorTitle": "The AI could not answer",
+    "fetchFailed": "Unable to fetch {{what}}.",
+    "whatAnalysis": "analysis",
+    "whatResponse": "response",
+    "thinking": "Thinking...",
+    "introTitle": "Ask the AI about this position",
+    "intro": "Choose an analysis style and press Analyze to get a commentary of the current position. Then you can ask follow-up questions.",
+    "backendRemote": "Cloud AI",
+    "send": "Send"
+  },
+  "live": {
+    "title": "Events and Broadcasts",
+    "searchPlaceholder": "Paste Lichess Broadcast URL or Event ID...",
+    "searchLabel": "Lichess broadcast URL or event ID",
+    "search": "Search",
+    "example": "Example: https://lichess.org/broadcast/.../sO7W9Jje/eJLgkG7n or eJLgkG7n",
+    "featured": "Featured Event",
+    "yourQuery": "Your Query",
+    "loadingTitle": "Loading Event Title...",
+    "unknownEvent": "Event Name Unknown",
+    "refreshData": "Refresh PGN data",
+    "showMore": "Show more",
+    "ongoing": "Ongoing",
+    "noGames": "No games available for this event yet.",
+    "unavailable": "Event unavailable"
+  },
+  "about": {
+    "intro": "This is <strong>ShashGuru</strong>, a chess analyzer that takes a FEN, asks a UCI chess engine to analyse it, and then outputs a natural language analysis made by an LLM.",
+    "copyright": "© 2025 Alessandro Libralesso",
+    "license": "ShashGuru is free software: you can redistribute it and/or modify it under the terms of the <strong>GNU General Public License</strong> as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.",
+    "warranty": "ShashGuru is distributed in the hope that it will be useful, but <strong>WITHOUT ANY WARRANTY</strong>; without even the implied warranty of <em>MERCHANTABILITY</em> or <em>FITNESS FOR A PARTICULAR PURPOSE</em>. See the GNU General Public License for more details.",
+    "copy": "You should have received a copy of the GNU General Public License along with this program. If not, see"
+  }
+}

@@ -1,17 +1,35 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import ChessBoard from '@/components/ChessBoard.vue'
+import { useTranslation } from 'i18next-vue'
+import {
+  ChartNoAxesColumn,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Info,
+  ListOrdered,
+  MessageSquare,
+  Microscope,
+} from '@lucide/vue'
 import AIChat from '@/components/AIChat.vue'
-import MoveTreeDisplay from '@/components/MoveTreeDisplay.vue'
+import ChessBoard from '@/components/ChessBoard.vue'
 import EngineLines from '@/components/EngineLines.vue'
+import IconButton from '@/components/IconButton.vue'
+import MoveTreePanel from '@/components/MoveTreePanel.vue'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Separator } from '@/components/ui/separator'
+import { Spinner } from '@/components/ui/spinner'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useKeyboardNavigation } from '@/composables/useKeyboardNavigation'
 import { useChatStore } from '@/stores/chat'
 import { useGameStore } from '@/stores/game'
 
+const { t } = useTranslation()
 const game = useGameStore()
 const {
-  root: moveTree,
   hasMoves,
   hasPlayerInfo,
   whitePlayer,
@@ -26,303 +44,115 @@ const { loading: isLoading } = storeToRefs(useChatStore())
 
 const activeTab = ref<'moves' | 'chat'>('moves')
 
-function switchTab(tab: 'moves' | 'chat') {
-  activeTab.value = tab
+/** The tabs handle the arrow keys themselves: keep the global move navigation from also firing. */
+function onTabsKeydown(event: KeyboardEvent) {
+  if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) event.stopPropagation()
 }
 
 useKeyboardNavigation(isLoading)
 </script>
 
 <template>
-  <div id="chessboard" class="d-flex flex-column flex-lg-row justify-content-evenly m-2 m-lg-5" >
-    <div class="flex-item mx-0 p-3 pt-0" :class="{ 'loading': isLoading }">
+  <main
+    id="chessboard"
+    class="home-layout mx-auto grid max-w-[1800px] grid-cols-1 gap-(--gap) p-(--pad) text-foreground lg:grid-cols-[clamp(320px,calc(70vmin_+_80px),780px)_minmax(360px,1fr)] lg:items-start"
+  >
+    <div class="board-col min-w-0" :class="{ 'pointer-events-none cursor-progress opacity-70': isLoading }">
       <ChessBoard />
     </div>
 
-    <div class="right-panel d-flex flex-column flex-lg-row flex-fill mx-2 mx-lg-5 gap-3">
-      <!-- TABBED PANEL -->
-      <div id="tabbed-panel" class="tabbed-section rounded-4 d-flex flex-column rounded-top-4 overflow-hidden">
-        <!-- TAB NAVIGATION -->
-        <div class="tab-navigation d-flex">
-          <button 
-            class="tab-button flex-fill py-2 px-3 border-0 fw-bold"
-            :class="{ 'tab-active': activeTab === 'moves', 'tab-inactive': activeTab !== 'moves' }"
-            @click="switchTab('moves')">
-            <i class="material-icons me-1" style="font-size: 18px;">sports_esports</i>
-            Moves
-          </button>
-          <button 
-            class="tab-button flex-fill py-2 px-3 border-0 fw-bold"
-            :class="{ 'tab-active': activeTab === 'chat', 'tab-inactive': activeTab !== 'chat' }"
-            @click="switchTab('chat')">
-            <i class="material-icons me-1" style="font-size: 18px;">chat</i>
-            AI Chat
-          </button>
-        </div>
+    <!-- Tabbed panel -->
+    <section id="tabbed-panel" class="tabbed-section panel panel-fill flex min-w-0 flex-col">
+      <Tabs v-model="activeTab" class="flex min-h-0 flex-1 flex-col gap-0">
+        <TabsList variant="line" class="w-full shrink-0" :aria-label="t('home.tabs.label')" @keydown="onTabsKeydown">
+          <TabsTrigger value="moves">
+            <ListOrdered aria-hidden="true" />{{ t('home.tabs.moves') }}
+          </TabsTrigger>
+          <TabsTrigger value="chat">
+            <MessageSquare aria-hidden="true" />{{ t('home.tabs.chat') }}
+          </TabsTrigger>
+        </TabsList>
 
-        <!-- TAB CONTENT -->
-        <div class="tab-content flex-fill d-flex flex-column overflow-hidden">
-          <!-- MOVES TAB -->
-          <div class="tab-pane flex-fill d-flex flex-column overflow-hidden">
-            <!-- PLAYER INFO -->
-            <div v-if="hasPlayerInfo" id="playerInfo"
-              class="d-flex align-items-center justify-content-between p-3 text-light"
-              style="background-color: #33312e; border-bottom: 1px solid #ffffff1e; max-height: 100px;">
-
-              <!-- White Player -->
-              <div class="text-truncate text-center" style="flex: 1; padding-right: 1rem;">
-                <div class="fw-bold fs-6">White:</div>
-                <div class="fs-6 text-truncate">{{ whitePlayer }}</div>
-              </div>
-
-              <!-- Game Result  -->
-              <div class="flex-shrink-0 mx-auto px-2">
-                <div class="fs-4 fw-bold">{{ gameResult }}</div>
-              </div>
-
-              <!-- Black Player -->
-              <div class="text-truncate text-center" style="flex: 1; padding-left: 1rem;">
-                <div class="fw-bold fs-6">Black:</div>
-                <div class="fs-6 text-truncate">{{ blackPlayer }}</div>
-              </div>
-            </div>
-            
-            <!-- MOVES -->
-            <div v-if="activeTab === 'moves'" class="flex-fill">
-              <div id="moveHeader" class="d-flex justify-content-center align-items-center py-1 flex-shrink-0">
-                <div>
-                  <button class="btn btn-sm text-white material-icons" :disabled="!canGoBack"
-                    @click="game.goToStart">first_page</button>
-                </div>
-                <div>
-                  <button class="btn btn-sm text-white material-icons" :disabled="!canGoBack"
-                    @click="game.back">arrow_back</button>
-                </div>
-                <span class="fs-6 fw-bold text-center mx-2">
-                  <span v-if="isAnalysisMode" class="badge bg-warning text-dark ms-1">Analysis</span>
-                </span>
-                <div>
-                  <button class="btn btn-sm text-white material-icons" :disabled="!canGoForward"
-                    @click="game.forward">arrow_forward</button>
-                </div>
-                <div>
-                  <button class="btn btn-sm text-white material-icons" :disabled="!canGoForward"
-                    @click="game.goToEnd">last_page</button>
-                </div>
-                <div class="ms-1">
-                  <button class="btn btn-sm" :class="isAnalysisMode ? 'btn-warning' : 'btn-outline-light'" 
-                    @click="game.toggleAnalysisMode" title="Toggle Analysis Mode (Shift+Enter)">
-                    <i class="material-icons" style="font-size: 18px;">analytics</i>
-                  </button>
-                </div>
-                <div class="ms-1">
-                  <button class="btn btn-sm btn-outline-info" 
-                    @click="game.fetchMainLineEvaluations" 
-                    :disabled="isLoadingEvaluations"
-                    title="Fetch Evaluations">
-                    <span v-if="isLoadingEvaluations" class="spinner-border spinner-border-sm me-1" role="status"></span>
-                    <i class="material-icons" style="font-size: 18px;">assessment</i>
-                  </button>
-                </div>
-              </div>
-              <div class="flex-fill overflow-auto">
-                <div id="moves" class="px-3 pt-3 pb-2 h-100">
-                  <!-- Engine Lines Display -->
-                  <EngineLines class="mb-3" />
-                  <div v-if="hasMoves" class="move-tree shadow">
-                    <div class="moves-header rounded-top ">
-                      <span class="header-text fs-6">Moves</span>
-                    </div> 
-                      <div class="moves-body ps-2 rounded-bottom ">
-                      <MoveTreeDisplay :node="moveTree" />
-                    </div>
-                  </div>
-                  <div v-if="!hasMoves && !isAnalysisMode" class="text-secondary text-center">
-                    Load a PGN or make moves on the board to begin analysis
-                  </div>
-                  <div v-if="!hasMoves && isAnalysisMode" class="text-secondary text-center">
-                    <i class="material-icons me-2">info</i>Analysis mode enabled - make moves on the board or use arrow keys to navigate
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- CHAT TAB -->
-            <div v-if="activeTab === 'chat'" id="chat-view" class="tab-pane chat-section flex-fill rounded-4 d-flex flex-column">
-              <AIChat />
-            </div>
+        <!-- Player info -->
+        <div
+          v-if="hasPlayerInfo"
+          id="playerInfo"
+          class="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-(--panel-divider) bg-black/20 px-(--pad) py-(--pad-sm) text-center"
+        >
+          <div class="min-w-0">
+            <div class="panel-label">{{ t('home.whiteLabel') }}</div>
+            <div class="truncate text-sm font-medium">{{ whitePlayer }}</div>
+          </div>
+          <div class="num text-xl font-bold text-lime">{{ gameResult }}</div>
+          <div class="min-w-0">
+            <div class="panel-label">{{ t('home.blackLabel') }}</div>
+            <div class="truncate text-sm font-medium">{{ blackPlayer }}</div>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
+
+        <!-- Moves tab -->
+        <TabsContent value="moves" id="moves-panel" class="flex min-h-0 flex-1 flex-col">
+          <div
+            id="moveHeader"
+            class="flex shrink-0 flex-wrap items-center justify-center gap-1 border-b border-(--panel-divider) bg-black/15 px-2 py-1.5"
+          >
+            <IconButton :label="t('home.toolbar.first')" :disabled="!canGoBack" @click="game.goToStart()">
+              <ChevronsLeft aria-hidden="true" />
+            </IconButton>
+            <IconButton :label="t('home.toolbar.back')" :disabled="!canGoBack" @click="game.back()">
+              <ChevronLeft aria-hidden="true" />
+            </IconButton>
+            <span v-if="isAnalysisMode" class="eval-chip mx-1 text-warning">{{ t('home.analysisBadge') }}</span>
+            <IconButton :label="t('home.toolbar.forward')" :disabled="!canGoForward" @click="game.forward()">
+              <ChevronRight aria-hidden="true" />
+            </IconButton>
+            <IconButton :label="t('home.toolbar.last')" :disabled="!canGoForward" @click="game.goToEnd()">
+              <ChevronsRight aria-hidden="true" />
+            </IconButton>
+
+            <Separator orientation="vertical" class="mx-1 h-5" />
+
+            <IconButton
+              :label="t('home.toolbar.toggleAnalysis')"
+              shortcut="Shift+Enter"
+              :variant="isAnalysisMode ? 'default' : 'outline'"
+              :pressed="isAnalysisMode"
+              @click="game.toggleAnalysisMode()"
+            >
+              <Microscope aria-hidden="true" />
+            </IconButton>
+            <IconButton
+              :label="t('home.toolbar.fetchEvaluations')"
+              variant="outline"
+              :disabled="isLoadingEvaluations"
+              @click="game.fetchMainLineEvaluations()"
+            >
+              <Spinner v-if="isLoadingEvaluations" aria-hidden="true" />
+              <ChartNoAxesColumn v-else aria-hidden="true" />
+            </IconButton>
+          </div>
+
+          <ScrollArea class="min-h-0 flex-1">
+            <div id="moves" class="flex flex-col gap-(--gap) p-(--pad)">
+              <EngineLines />
+              <MoveTreePanel v-if="hasMoves" />
+              <Empty v-else class="border border-dashed border-border">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon"><Info aria-hidden="true" /></EmptyMedia>
+                  <EmptyDescription>
+                    {{ isAnalysisMode ? t('home.emptyAnalysis') : t('home.emptyMoves') }}
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <!-- Chat tab -->
+        <TabsContent value="chat" id="chat-view" class="min-h-0 flex-1">
+          <AIChat />
+        </TabsContent>
+      </Tabs>
+    </section>
+  </main>
 </template>
-
-
-
-<style scoped>
-.tabbed-section {
-  background-color: #262421;
-  min-width: 600px;
-  height: 80vh;
-  flex: 1;
-}
-
-.tab-navigation {
-  background-color: #1a1916;
-  border-bottom: 1px solid #3a3a3a;
-  border-top-right-radius: 1em; 
-  border-top-left-radius: 1em; 
-}
-
-.tab-button {
-  background-color: transparent;
-  color: #b2b2b2;
-  transition: all 0.3s ease;
-  
-  border-bottom: 3px solid transparent !important;
-}
-
-.tab-button:hover {
-  background-color: #2a2824;
-  color: #e8e8e8;
-}
-
-.tab-active {
-  background-color: #2f2d2a !important;
-  color: #aaa23a !important;
-  border-bottom: 3px solid #aaa23a !important;
-  border-top-right-radius: 1em;
-  border-top-left-radius: 1em;
-  
-}
-
-.tab-inactive {
-  background-color: #262421;
-  border-top-right-radius: 1em;
-  border-top-left-radius: 1em;
-  border-bottom: 3px solid #262421 !important;
-
-}
-
-.tab-content {
-  background-color: #262421;
-}
-
-.tab-pane {
-  overflow: hidden;
-}
-
-.moves-section {
-  background-color: #262421;
-  min-width: 350px;
-  max-width: 500px;
-  height: 80vh;
-  flex: 0 0 auto;
-}
-
-.chat-section {
-  background-color: #262421;
-  min-width: 400px;
-  flex: 1;
-}
-
-.moves-header {
-  background-color: #444;
-  padding: 8px 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  
-}
-
-.header-text {
-  color: #e8e8e8;
-  font-weight: 600;
-  font-size: 0.9rem;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  
-}
-
-.moves-body {
-  border: 1px solid #444;
-  border-top: 0px solid transparent;
-  margin-bottom: 12px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  max-height: 60vh;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  padding: 8px 0;
-  scrollbar-width: thin;
-  scrollbar-color: #888 transparent;
-}
-
-.right-panel {
-  height: 80vh;
-}
-
-#chessboard {
-  color: aliceblue;
-  height: 50%;
-}
-
-.selected>.colorize {
-  background-color: #cdd26a;
-  color: black;
-  border-radius: 4px;
-  user-select: none;
-}
-
-.loading {
-  pointer-events: none;
-  /* Prevent all interaction */
-}
-
-#moves {
-  overflow-y: auto;
-  overflow-x: hidden;
-  scroll-behavior: smooth;
-  border-bottom: 1px solid #ffffff1e;
-  line-height: 1.6;
-  scrollbar-width: thin;
-  scrollbar-color: #888 transparent;
-}
-
-.move-tree {
-  font-family: 'Courier New', monospace;
-}
-
-#moveHeader {
-  background-color: #2f2d2a;
-  border-bottom: 1px solid #ffffff1e;
-}
-
-#moveHeader button {
-  border: none;
-}
-
-#playerInfo {
-  background-color: #33312e;
-  border-bottom: 1px solid #ffffff1e;
-}
-
-/* width */
-::-webkit-scrollbar {
-  width: 10px;
-}
-
-/* Track */
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-/* Handle */
-::-webkit-scrollbar-thumb {
-  background: #888;
-}
-
-/* Handle on hover */
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
-</style>

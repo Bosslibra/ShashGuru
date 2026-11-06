@@ -1,70 +1,33 @@
-<template>
-    <div v-if="shouldRender" class="card-like event-section mx-5 mb-2 pb-3 position-relative">
-        <div class="d-flex flex-row align-items-center justify-content-between p-3 event-header">
-            <div class="fs-4 flex-shrink-0 cursor-pointer" @click="toggleVisibility">
-                <span>{{ title }}</span>
-                <span class="material-icons ms-1">
-                    {{ isVisible ? 'keyboard_arrow_down' : 'chevron_right' }}
-                </span>
-            </div>
-            <div class="d-flex gap-2">
-                <!-- Refresh Button -->
-                <button 
-                    class="btn btn-outline-secondary btn-sm refresh-btn" 
-                    @click="handleRefresh"
-                    :disabled="isRefreshing"
-                    title="Refresh PGN data"
-                >
-                    <span v-if="!isRefreshing" class="material-icons">refresh</span>
-                    <span v-else class="spinner-border spinner-border-sm"></span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Body -->
-        <transition name="slide">
-            <div v-if="isVisible" class="d-flex flex-row flex-wrap event-body">
-
-                <template v-if="isLoading">
-                    <EventGameSkeleton v-for="i in 3"
-                        :key="`skeleton-${i}`" />
-                </template>
-
-                <template v-else>
-                    <EventGame v-for="(pgn, index) in pgnListToRender" :key="`pgn-${index}`" :pgn="pgn"
-                        class="flex-item shadow" />
-                </template>
-
-            </div>
-        </transition>
-        <span v-if="isVisible && (pgnListToRender.length < pgnList.length) && !isLoading" class="material-icons-outlined"
-            id="load-more" @click="loadMore" title="Show more">
-            add
-        </span>
-        
-    </div>
-</template>
-
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useTranslation } from 'i18next-vue'
+import { ChevronRight, Plus, RefreshCw } from '@lucide/vue'
 import EventGame from './EventGame.vue'
 import EventGameSkeleton from './EventGameSkeleton.vue'
+import IconButton from './IconButton.vue'
+import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Spinner } from '@/components/ui/spinner'
 
 const BATCH = 5
 
 const props = withDefaults(
-    defineProps<{
-        title: string
-        pgnList?: string[]
-        shouldRender?: boolean
-        initiallyOpen?: boolean
-        /** A fetch of the games is in progress. */
-        loading?: boolean
-    }>(),
-    { pgnList: () => [], shouldRender: true, initiallyOpen: false, loading: false },
+  defineProps<{
+    title: string
+    pgnList?: string[]
+    shouldRender?: boolean
+    initiallyOpen?: boolean
+    /** A fetch of the games is in progress. */
+    loading?: boolean
+    /** Message shown when the event has no games (empty = nothing). */
+    emptyText?: string
+  }>(),
+  { pgnList: () => [], shouldRender: true, initiallyOpen: false, loading: false, emptyText: '' },
 )
 
 const emit = defineEmits<{ refresh: [] }>()
+
+const { t } = useTranslation()
 
 const isVisible = ref(props.initiallyOpen)
 const visibleCount = ref(BATCH)
@@ -73,141 +36,59 @@ const visibleCount = ref(BATCH)
 const isLoading = computed(() => props.loading && props.pgnList.length === 0)
 const isRefreshing = computed(() => props.loading)
 const pgnListToRender = computed(() => props.pgnList.slice(0, visibleCount.value))
+const canLoadMore = computed(() => pgnListToRender.value.length < props.pgnList.length && !isLoading.value)
 
 const loadMore = () => {
-    visibleCount.value += BATCH
-}
-
-const toggleVisibility = () => {
-    isVisible.value = !isVisible.value
+  visibleCount.value += BATCH
 }
 
 const handleRefresh = () => {
-    if (!isRefreshing.value) emit('refresh')
+  if (!isRefreshing.value) emit('refresh')
 }
 </script>
 
+<template>
+  <Collapsible v-if="shouldRender" v-model:open="isVisible" class="event-section panel">
+    <div class="panel-header">
+      <CollapsibleTrigger as-child>
+        <button
+          type="button"
+          class="event-toggle -ml-1 flex min-w-0 items-center gap-2 rounded-md p-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ChevronRight
+            class="size-5 shrink-0 text-olive transition-transform"
+            :class="{ 'rotate-90': isVisible }"
+            aria-hidden="true"
+          />
+          <h3 class="truncate text-lg font-semibold text-foreground">{{ title }}</h3>
+        </button>
+      </CollapsibleTrigger>
+      <IconButton :label="t('live.refreshData')" variant="outline" size="icon-sm" :disabled="isRefreshing" @click="handleRefresh">
+        <Spinner v-if="isRefreshing" aria-hidden="true" />
+        <RefreshCw v-else aria-hidden="true" />
+      </IconButton>
+    </div>
 
-<style scoped>
-#load-more {
-    position: absolute;
-    background: #aaa23a;
-    color: black;
-    border-radius: 50%;
-    padding: 10px;
-    z-index: 300;
-    bottom: -20px;
-    left: 50%;
-    cursor: pointer;
-}
+    <CollapsibleContent>
+      <div class="event-body grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-(--gap) p-(--pad)">
+        <template v-if="isLoading">
+          <EventGameSkeleton v-for="i in 3" :key="`skeleton-${i}`" />
+        </template>
 
-.refresh-btn {
-    border-color: #aaa23a;
-    color: #aaa23a;
-    background-color: transparent;
-}
+        <p v-else-if="pgnList.length === 0 && emptyText" class="col-span-full py-8 text-center text-muted-foreground" role="status">
+          {{ emptyText }}
+        </p>
 
-.refresh-btn:hover {
-    background-color: #aaa23a;
-    color: white;
-    border-color: #aaa23a;
-}
+        <template v-else>
+          <EventGame v-for="(pgn, index) in pgnListToRender" :key="`pgn-${index}`" :pgn="pgn" class="flex-item" />
+        </template>
+      </div>
 
-.refresh-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.refresh-btn .material-icons {
-    font-size: 18px;
-}
-
-.card-like {
-    background-color: #1c1c1c;
-    border: 1px solid #333;
-    border-radius: 10px;
-}
-
-.event-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    cursor: pointer;
-    background-color: #232323;
-    border-bottom: 1px solid #333;
-    transition: background 0.2s;
-}
-
-.event-header:hover {
-    background-color: #2f2f2f;
-}
-
-.event-body {
-    padding: 12px 16px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-
-.fade-highlight-enter-active {
-    transition: background-color 1.5s ease;
-}
-
-.fade-highlight-enter-from {
-    background-color: #444a2f;
-    /* highlight color */
-}
-
-.fade-highlight-enter-to {
-    background-color: transparent;
-}
-
-.highlight-container {
-    border: 2px solid #aaa23a;
-    border-radius: 8px;
-    padding: 10px;
-    margin-bottom: 1rem;
-}
-
-
-.cursor-pointer {
-    cursor: pointer;
-}
-
-.transition-transform {
-    transition: transform 0.3s ease;
-}
-
-.rotate-90 {
-    transform: rotate(90deg);
-}
-
-.toggle-arrow {
-    font-size: 1.5rem;
-    /* make icon size match your text */
-    line-height: 1;
-    /* removes extra vertical padding */
-    vertical-align: middle;
-}
-
-.slide-enter-active,
-.slide-leave-active {
-    transition: max-height 0.3s ease, opacity 0.3s ease;
-    overflow: hidden;
-}
-
-.slide-enter-from,
-.slide-leave-to {
-    max-height: 0;
-    opacity: 0;
-}
-
-.slide-enter-to,
-.slide-leave-from {
-    max-height: 1000px;
-    /* something large enough for your content */
-    opacity: 1;
-}
-</style>
+      <div v-if="canLoadMore" class="flex justify-center pb-(--pad)">
+        <Button id="load-more" variant="outline" @click="loadMore">
+          <Plus aria-hidden="true" />{{ t('live.showMore') }}
+        </Button>
+      </div>
+    </CollapsibleContent>
+  </Collapsible>
+</template>

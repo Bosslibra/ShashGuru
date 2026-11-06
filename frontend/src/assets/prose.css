@@ -1,0 +1,79 @@
+/* Typography for rendered markdown (chat answers, About text). */
+.md-content > * + * {
+  margin-top: 0.75em;
+}
+.md-content h1,
+.md-content h2,
+.md-content h3,
+.md-content h4 {
+  margin-top: 1.1em;
+  font-weight: 650;
+  line-height: 1.3;
+  color: var(--text-strong);
+}
+.md-content h1 {
+  font-size: 1.2em;
+}
+.md-content h2 {
+  font-size: 1.1em;
+}
+.md-content h3,
+.md-content h4 {
+  font-size: 1em;
+}
+.md-content ul,
+.md-content ol {
+  padding-left: 1.4em;
+}
+.md-content ul {
+  list-style: disc;
+}
+.md-content ol {
+  list-style: decimal;
+}
+.md-content li + li {
+  margin-top: 0.25em;
+}
+.md-content li::marker {
+  color: var(--olive);
+}
+.md-content strong {
+  color: var(--text-strong);
+  font-weight: 650;
+}
+.md-content a {
+  color: var(--lime);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.md-content code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+  border-radius: calc(var(--radius) * 0.6);
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+.md-content pre {
+  overflow-x: auto;
+  padding: 0.75em 1em;
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+}
+.md-content pre code {
+  padding: 0;
+  background: none;
+}
+.md-content blockquote {
+  padding-left: 1em;
+  border-left: 2px solid var(--olive);
+  color: var(--text-muted);
+}
+.md-content hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+/* Compact paragraph spacing inside user bubbles */
+.user-message .message > * + * {
+  margin-top: 0.5em;
+}

@@ -1,16 +1,22 @@
 <script setup lang="ts">
 import { computed, reactive, ref, shallowRef, watch, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useTranslation } from 'i18next-vue'
 import { TheChessboard, type BoardApi, type PieceColor } from 'vue3-chessboard'
 import 'vue3-chessboard/style.css'
 import type { Move, Square } from 'chess.js'
+import { ArrowUpDown, RotateCcw, SlidersHorizontal } from '@lucide/vue'
 import EvaluationBar from './EvaluationBar.vue'
 import FenPgnInputs from './FenPgnInputs.vue'
-import SettingsModal from './SettingsModal.vue'
+import SettingsDialog from './SettingsDialog.vue'
+import { Button } from '@/components/ui/button'
 import { useEvaluationStore } from '@/stores/evaluation'
 import { useGameStore } from '@/stores/game'
 import { useSettingsStore } from '@/stores/settings'
+import { useToastStore } from '@/stores/toast'
 
+const { t } = useTranslation()
+const toast = useToastStore()
 const game = useGameStore()
 const settings = useSettingsStore()
 const evaluation = useEvaluationStore()
@@ -68,7 +74,7 @@ function handleMove(move: Move) {
 }
 
 function handleCheckmate(mated: PieceColor) {
-  alert(mated === 'white' ? 'Black wins by checkmate!' : 'White wins by checkmate!')
+  toast.success(mated === 'white' ? t('board.blackWins') : t('board.whiteWins'), 8000)
 }
 
 function toggleOrientation() {
@@ -83,95 +89,54 @@ function resetBoard() {
 </script>
 
 <template>
-  <div class="chessboard-container" >
-    <div class="board-section w-100">
-      <div class="d-flex">
-        <section role="region" aria-label="Board Controls" class="board-controls">
-          <button type="button" @click="toggleOrientation" class="btn btn-sm m-1">
-            Flip Board
-          </button>
-          <button type="button" @click="resetBoard" class="btn btn-sm m-1">
-            Starting Position
-          </button>
-          <button type="button" @click="showSettings = !showSettings" class="btn btn-sm m-1">
-            Settings
-          </button>
+  <div class="chessboard-container w-full">
+    <div class="board-section flex w-full flex-col">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <section role="region" :aria-label="t('board.controls')" class="board-controls flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" @click="toggleOrientation">
+            <ArrowUpDown aria-hidden="true" />{{ t('board.flip') }}
+          </Button>
+          <Button variant="outline" size="sm" @click="resetBoard">
+            <RotateCcw aria-hidden="true" />{{ t('board.start') }}
+          </Button>
+          <Button variant="outline" size="sm" @click="showSettings = true">
+            <SlidersHorizontal aria-hidden="true" />{{ t('board.settings') }}
+          </Button>
         </section>
-        <div v-if="side === 'w'" class="text-white p-2">White to play</div>
-        <div v-else-if="side === 'b'" class="text-white p-2">Black to play</div>
+
+        <!-- Side to move: a small square in the colour of the side, then the text -->
+        <div v-if="side" class="flex items-center gap-2 text-sm font-medium text-foreground" role="status">
+          <span
+            class="size-3.5 rounded-[3px] border"
+            :class="side === 'w' ? 'border-cream bg-cream' : 'border-muted-foreground bg-black'"
+            aria-hidden="true"
+          ></span>
+          {{ side === 'w' ? t('board.whiteToPlay') : t('board.blackToPlay') }}
+        </div>
       </div>
 
-      <div class="board-with-eval">
-        <div class="evaluation-panel">
+      <div
+        class="board-with-eval mx-auto flex w-full items-stretch gap-2 max-w-[calc(min(70vh,100vmin)_+_60px)] sm:gap-3"
+      >
+        <div class="evaluation-panel flex shrink-0 flex-col items-center">
           <EvaluationBar :board-orientation="boardOrientation" />
         </div>
-        <div class="chessboard-container-wrapper">
-          <TheChessboard
-            :board-config="boardConfig"
-            @board-created="handleBoardCreated"
-            @checkmate="handleCheckmate"
-            @move="handleMove"
-            style="max-height: 70vh; max-width: 70vmin; min-width: 50vmin; "
-            class=""
-          />
+        <div class="chessboard-container-wrapper relative flex min-w-0 flex-1 flex-col">
+          <div class="overflow-hidden rounded-(--radius) ring-1 ring-border shadow-(--panel-shadow)">
+            <TheChessboard
+              :board-config="boardConfig"
+              class="w-full! max-w-none!"
+              @board-created="handleBoardCreated"
+              @checkmate="handleCheckmate"
+              @move="handleMove"
+            />
+          </div>
         </div>
       </div>
 
       <FenPgnInputs />
     </div>
 
-    <SettingsModal v-if="showSettings" @close="showSettings = false" />
+    <SettingsDialog v-model:open="showSettings" />
   </div>
 </template>
-
-<style scoped>
-.chessboard-container {
-  width: 100%;
-}
-
-.board-section {
-  display: flex;
-  flex-direction: column;
-}
-
-.board-with-eval {
-  display: flex;
-  align-items: stretch;
-  gap: 15px;
-  height: 100%;
-}
-
-.evaluation-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.chessboard-container-wrapper {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
-
-.board-controls {
-  margin-bottom: 1rem;
-}
-
-button.btn {
-  background: #262421;
-  color: #f2f2f2;
-  border: none;
-  font-weight: 600;
-  border-radius: 6px;
-  padding: 0.5em 1.2em;
-  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
-}
-
-button.btn:hover {
-  background: #cdd26a;
-  color: #232323;
-  box-shadow: 0 4px 16px rgba(205, 210, 106, 0.15);
-}
-</style>

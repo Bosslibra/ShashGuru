@@ -1,8 +1,14 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useTranslation } from 'i18next-vue'
+import { CircleAlert } from '@lucide/vue'
+import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from '@/components/ui/input-group'
 import { isValidFen } from '@/lib/fen'
 import { useGameStore } from '@/stores/game'
+import { useToastStore } from '@/stores/toast'
 
+const { t } = useTranslation()
+const toast = useToastStore()
 const game = useGameStore()
 
 // The FEN box follows the board; typing a valid FEN starts a new analysis from that position.
@@ -16,6 +22,12 @@ watch(fenInput, (value) => {
   if (fen && fen !== game.currentFen && isValidFen(fen)) game.loadFen(fen)
 })
 
+/** The typed FEN is not valid: say so instead of silently ignoring it. */
+const fenInvalid = computed(() => {
+  const fen = fenInput.value.trim()
+  return !!fen && fen !== game.currentFen && !isValidFen(fen)
+})
+
 const pgnInput = ref(game.pgnText)
 watch(
   () => game.pgnText,
@@ -26,46 +38,50 @@ function loadPgn() {
   try {
     game.loadPgn(pgnInput.value)
   } catch (error) {
-    alert(error instanceof Error ? error.message : 'PGN is invalid or empty.')
+    console.warn(error)
+    toast.error(t('errors.invalidPgn'))
   }
 }
 </script>
 
 <template>
-  <div>
-    <div class="fen-input-container w-100">
-      <div class="input-group flex-nowrap mt-2">
-        <span class="input-group-text text-white bg-light bg-opacity-25 border border-0 font-monospace">FEN</span>
-        <input v-model="fenInput" id="fenInput"
-          class="  form-control border px-3 py-2 text-white bg-dark border-0"
-          placeholder="Enter FEN (updates automatically)" autocomplete="off" aria-label="FEN Input" />
-      </div>
+  <div class="mt-3 space-y-2">
+    <div class="fen-input-container">
+      <InputGroup>
+        <InputGroupAddon>
+          <InputGroupText class="num font-semibold">FEN</InputGroupText>
+        </InputGroupAddon>
+        <InputGroupInput
+          id="fenInput"
+          v-model="fenInput"
+          class="num text-[13px]"
+          :placeholder="t('board.fenPlaceholder')"
+          autocomplete="off"
+          :aria-label="t('board.fenLabel')"
+          :aria-invalid="fenInvalid"
+          :aria-describedby="fenInvalid ? 'fen-error' : undefined"
+        />
+      </InputGroup>
+      <p v-if="fenInvalid" id="fen-error" class="mt-1 flex items-center gap-1 text-sm text-destructive" role="alert">
+        <CircleAlert class="size-4" aria-hidden="true" />{{ t('errors.invalidFen') }}
+      </p>
     </div>
+
     <div class="pgn-input-container">
-      <div class="input-group flex-nowrap mt-2">
-        <span class="input-group-text text-white bg-light bg-opacity-25 border border-0 font-monospace">PGN</span>
-        <input v-model="pgnInput" @keyup.enter="loadPgn" id="pgnInput"
-          class="form-control border  px-3 py-2   text-white bg-dark border-0" placeholder="Enter PGN and press Enter"
-          autocomplete="off" aria-label="PGN Input" />
-      </div>
+      <InputGroup>
+        <InputGroupAddon>
+          <InputGroupText class="num font-semibold">PGN</InputGroupText>
+        </InputGroupAddon>
+        <InputGroupInput
+          id="pgnInput"
+          v-model="pgnInput"
+          class="num text-[13px]"
+          :placeholder="t('board.pgnPlaceholder')"
+          autocomplete="off"
+          :aria-label="t('board.pgnLabel')"
+          @keyup.enter="loadPgn"
+        />
+      </InputGroup>
     </div>
   </div>
 </template>
-
-<style scoped>
-input::placeholder {
-  color: gray;
-}
-
-.fen-input-container {
-  margin-top: 0.5rem;
-}
-
-.pgn-input-container {
-  margin-top: 0.5rem;
-}
-
-input {
-  box-shadow: none !important;
-}
-</style>

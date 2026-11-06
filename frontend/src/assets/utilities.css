@@ -1,0 +1,27 @@
+/* Small global helpers that Tailwind utilities do not cover. */
+
+/* Keyboard focus for raw elements (links, native buttons); shadcn components draw their own ring */
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Themed scrollbar for native scroll containers (e.g. the chat) */
+.app-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.app-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.app-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.app-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+.app-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--olive);
+}

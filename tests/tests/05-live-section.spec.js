@@ -57,7 +57,7 @@ test.describe('Live Section Functionality', () => {
     await page.waitForTimeout(5000);
     
     // Check if loading spinner appears
-    const spinner = page.locator('.spinner-border');
+    const spinner = page.locator('[role="status"]').first();
     const isLoading = await spinner.isVisible().catch(() => false);
     
     if (isLoading) {

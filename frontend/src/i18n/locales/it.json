@@ -1,0 +1,169 @@
+{
+  "nav": {
+    "home": "HOME",
+    "live": "LIVE",
+    "about": "INFO",
+    "toggle": "Apri/chiudi menu",
+    "language": "Lingua"
+  },
+  "common": {
+    "close": "Chiudi",
+    "refresh": "Aggiorna",
+    "retry": "Riprova",
+    "on": "ON",
+    "off": "OFF",
+    "white": "Bianco",
+    "black": "Nero"
+  },
+  "errors": {
+    "invalidPgn": "Il PGN non è valido o è vuoto.",
+    "invalidFen": "FEN non valida",
+    "invalidBroadcast": "URL della trasmissione Lichess o ID del turno non valido",
+    "fetchPgn": "Impossibile scaricare il PGN"
+  },
+  "home": {
+    "tabs": {
+      "label": "Pannelli di analisi",
+      "moves": "Mosse",
+      "chat": "Chat AI"
+    },
+    "whiteLabel": "Bianco:",
+    "blackLabel": "Nero:",
+    "analysisBadge": "Analisi",
+    "toolbar": {
+      "first": "Vai alla prima mossa",
+      "back": "Mossa precedente",
+      "forward": "Mossa successiva",
+      "last": "Vai all'ultima mossa",
+      "toggleAnalysis": "Attiva/disattiva modalità analisi (Shift+Invio)",
+      "fetchEvaluations": "Calcola le valutazioni"
+    },
+    "movesHeader": "Mosse",
+    "emptyMoves": "Carica un PGN o gioca delle mosse sulla scacchiera per iniziare l'analisi",
+    "emptyAnalysis": "Modalità analisi attiva: gioca sulla scacchiera o usa le frecce per navigare"
+  },
+  "board": {
+    "controls": "Controlli della scacchiera",
+    "flip": "Ruota scacchiera",
+    "start": "Posizione iniziale",
+    "settings": "Impostazioni",
+    "whiteToPlay": "Muove il Bianco",
+    "blackToPlay": "Muove il Nero",
+    "whiteWins": "Il Bianco vince per scacco matto!",
+    "blackWins": "Il Nero vince per scacco matto!",
+    "fenPlaceholder": "Inserisci una FEN (si aggiorna in automatico)",
+    "fenLabel": "Campo FEN",
+    "pgnPlaceholder": "Inserisci un PGN e premi Invio",
+    "pgnLabel": "Campo PGN"
+  },
+  "engine": {
+    "title": "Analisi del motore",
+    "depth": "Profondità {{depth}}",
+    "analyzing": "Analisi in corso...",
+    "off": "L'analisi del motore è disattivata. Attivala dalle Impostazioni per vedere le linee migliori.",
+    "failed": "Valutazione del motore non riuscita.",
+    "noLines": "Nessuna linea del motore per questa posizione."
+  },
+  "settings": {
+    "title": "Impostazioni di valutazione",
+    "engineAnalysis": "Analisi del motore",
+    "depth": "Profondità: {{value}}",
+    "showBestMove": "Mostra la freccia della mossa migliore",
+    "showLines": "Linee mostrate: {{value}}",
+    "reset": "Ripristina predefiniti",
+    "description": "Preferenze del motore e della valutazione."
+  },
+  "moveTree": {
+    "autoDetected": "Rilevato automaticamente dalla valutazione",
+    "addMovePlaceholder": "Aggiungi mossa (es. Cf3, e4)",
+    "addMove": "Aggiungi mossa",
+    "menu": {
+      "title": "Annotazioni della mossa",
+      "promote": "Promuovi a linea principale",
+      "delete": "Elimina mossa",
+      "moveEvaluation": "Valutazione della mossa",
+      "clearEvaluation": "Rimuovi valutazione",
+      "shashinType": "Tipo di posizione Shashin",
+      "clearShashin": "Rimuovi tipo Shashin",
+      "groups": {
+        "tal": "Tal (Attacco)",
+        "capablanca": "Capablanca (Strategia)",
+        "petrosian": "Petrosian (Difesa)",
+        "chaos": "Caos"
+      }
+    },
+    "eval": {
+      "brilliant": "Brillante",
+      "great": "Ottima",
+      "best": "Migliore",
+      "excellent": "Eccellente",
+      "good": "Buona",
+      "book": "Mossa da libro",
+      "inaccuracy": "Imprecisione",
+      "mistake": "Errore",
+      "blunder": "Svarione",
+      "missed-win": "Vittoria mancata"
+    },
+    "shashin": {
+      "high-tal": "Tal alto",
+      "high-middle-tal": "Tal medio-alto",
+      "middle-tal": "Tal medio",
+      "middle-low-tal": "Tal medio-basso",
+      "low-tal": "Tal basso",
+      "capablanca": "Capablanca",
+      "high-petrosian": "Petrosian alto",
+      "high-middle-petrosian": "Petrosian medio-alto",
+      "middle-petrosian": "Petrosian medio",
+      "middle-low-petrosian": "Petrosian medio-basso",
+      "low-petrosian": "Petrosian basso",
+      "chaos-all": "Caos totale"
+    }
+  },
+  "chat": {
+    "you": "Tu",
+    "ai": "AI:",
+    "copy": "Copia",
+    "copied": "Copiato!",
+    "regenerate": "Rigenera",
+    "checkingBackend": "Controllo del PC AI locale...",
+    "backendEnabled": "PC AI attivo",
+    "recheckBackend": "Ricontrolla il backend locale",
+    "disclaimer": "I contenuti generati dall'AI possono contenere errori o imprecisioni. Verifica le informazioni importanti.",
+    "style": "Stile di analisi",
+    "analyze": "Analizza",
+    "placeholder": "Chiedi qualsiasi cosa!",
+    "inputLabel": "Fai una domanda sulla posizione",
+    "errorTitle": "L'AI non è riuscita a rispondere",
+    "fetchFailed": "Impossibile ottenere {{what}}.",
+    "whatAnalysis": "l'analisi",
+    "whatResponse": "la risposta",
+    "thinking": "Sto pensando...",
+    "introTitle": "Chiedi all'AI di questa posizione",
+    "intro": "Scegli uno stile di analisi e premi Analizza per avere un commento sulla posizione attuale. Poi potrai fare altre domande.",
+    "backendRemote": "AI nel cloud",
+    "send": "Invia"
+  },
+  "live": {
+    "title": "Eventi e trasmissioni",
+    "searchPlaceholder": "Incolla l'URL della trasmissione Lichess o l'ID dell'evento...",
+    "searchLabel": "URL della trasmissione Lichess o ID dell'evento",
+    "search": "Cerca",
+    "example": "Esempio: https://lichess.org/broadcast/.../sO7W9Jje/eJLgkG7n oppure eJLgkG7n",
+    "featured": "Evento in evidenza",
+    "yourQuery": "La tua ricerca",
+    "loadingTitle": "Caricamento del titolo dell'evento...",
+    "unknownEvent": "Nome evento sconosciuto",
+    "refreshData": "Aggiorna i dati PGN",
+    "showMore": "Mostra altre",
+    "ongoing": "In corso",
+    "noGames": "Nessuna partita disponibile per questo evento.",
+    "unavailable": "Evento non disponibile"
+  },
+  "about": {
+    "intro": "Questo è <strong>ShashGuru</strong>, un analizzatore di scacchi che prende una FEN, la fa analizzare a un motore UCI e produce un'analisi in linguaggio naturale generata da un LLM.",
+    "copyright": "© 2025 Alessandro Libralesso",
+    "license": "ShashGuru è software libero: puoi ridistribuirlo e/o modificarlo secondo i termini della <strong>GNU General Public License</strong> come pubblicata dalla Free Software Foundation, nella versione 3 della licenza o (a tua scelta) in una versione successiva.",
+    "warranty": "ShashGuru è distribuito nella speranza che sia utile, ma <strong>SENZA ALCUNA GARANZIA</strong>; senza nemmeno la garanzia implicita di <em>COMMERCIABILITÀ</em> o <em>IDONEITÀ A UNO SCOPO PARTICOLARE</em>. Consulta la GNU General Public License per maggiori dettagli.",
+    "copy": "Dovresti aver ricevuto una copia della GNU General Public License insieme a questo programma. In caso contrario, vedi"
+  }
+}

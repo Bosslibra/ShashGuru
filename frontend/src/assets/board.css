@@ -1,0 +1,59 @@
+/* Custom chessboard theme: cream and olive squares, lime highlights (vue3-chessboard / chessground). */
+:root {
+  --sq-light: #e6e6b3;
+  --sq-dark: #8a8745;
+}
+
+/* 8x8 board drawn with one conic-gradient (a1 is a dark square) instead of the default brown SVG */
+.cg-wrap cg-board {
+  background-color: var(--sq-light);
+  background-image: conic-gradient(var(--sq-dark) 25%, var(--sq-light) 0 50%, var(--sq-dark) 0 75%, var(--sq-light) 0);
+  background-size: 25% 25%;
+}
+
+.cg-wrap cg-board square.last-move {
+  background-color: color-mix(in srgb, var(--lime) 55%, transparent);
+}
+.cg-wrap cg-board square.selected {
+  background-color: color-mix(in srgb, var(--lime) 70%, transparent);
+}
+.cg-wrap cg-board square.move-dest {
+  background: radial-gradient(color-mix(in srgb, var(--bg) 38%, transparent) 22%, transparent 0);
+}
+.cg-wrap cg-board square.oc.move-dest {
+  background: radial-gradient(transparent 0%, transparent 80%, color-mix(in srgb, var(--bg) 38%, transparent) 80%);
+}
+.cg-wrap cg-board square.check {
+  background: radial-gradient(
+    ellipse at center,
+    var(--danger) 0%,
+    color-mix(in srgb, var(--danger) 80%, transparent) 25%,
+    transparent 89%
+  );
+}
+
+/* Coordinates: cream on dark squares, dark olive on light ones */
+.cg-wrap.orientation-white .files coord:nth-child(odd),
+.cg-wrap.orientation-white .ranks coord:nth-child(2n),
+.cg-wrap.orientation-black .files coord:nth-child(2n),
+.cg-wrap.orientation-black .ranks coord:nth-child(odd) {
+  color: var(--sq-light);
+}
+.cg-wrap.orientation-white .files coord:nth-child(2n),
+.cg-wrap.orientation-white .ranks coord:nth-child(odd),
+.cg-wrap.orientation-black .files coord:nth-child(odd),
+.cg-wrap.orientation-black .ranks coord:nth-child(2n) {
+  color: var(--sq-dark);
+}
+
+/* Best-move arrow: the library draws it with the paleBlue brush (#003088); recolour it */
+cg-container .cg-shapes {
+  opacity: 0.9;
+}
+cg-container .cg-shapes line[stroke='#003088'] {
+  stroke: var(--info);
+  opacity: 0.85;
+}
+cg-container .cg-shapes marker path[fill='#003088'] {
+  fill: var(--info);
+}

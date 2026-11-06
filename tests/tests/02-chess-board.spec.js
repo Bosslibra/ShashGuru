@@ -69,7 +69,7 @@ test.describe('Chess Board Functionality', () => {
         await page.screenshot({ path: 'test-results/evaluation-settings-modal.png' });
         
         // Close the modal
-        const closeBtn = page.locator('.close-btn');
+        const closeBtn = page.locator('.settings-modal').getByRole('button', { name: /close/i }).first();
         await closeBtn.click();
         await page.waitForTimeout(500);
       }

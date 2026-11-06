@@ -18,7 +18,9 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://shashguru.disi.unibo.it',
+    baseURL: process.env.BASE_URL || 'http://shashguru.disi.unibo.it',
+    // The UI is translated (i18next); the tests assert English text.
+    locale: 'en-US',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',

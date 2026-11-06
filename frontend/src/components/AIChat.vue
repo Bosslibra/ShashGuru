@@ -2,8 +2,20 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import MarkdownIt from 'markdown-it'
+import { useTranslation } from 'i18next-vue'
+import { Brain, Check, CircleAlert, Copy, RefreshCw, SendHorizontal, Sparkles } from '@lucide/vue'
+import IconButton from './IconButton.vue'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Spinner } from '@/components/ui/spinner'
 import { useChatStore } from '@/stores/chat'
 
+const { t } = useTranslation()
 const chat = useChatStore()
 const {
   visibleMessages,
@@ -12,6 +24,7 @@ const {
   toAnalyse,
   styles: analysisStyles,
   style: selectedStyle,
+  backend,
   checkingLocalBackend,
   isLocalBackendAvailable,
 } = storeToRefs(chat)
@@ -22,6 +35,8 @@ const userInput = ref('')
 const messagesEl = ref<HTMLElement | null>(null)
 const copiedIndex = ref<number | null>(null)
 const isClipboardCopyingAvailable = ref(true)
+/** Follow the stream only while the user is reading the bottom of the chat. */
+const stickToBottom = ref(true)
 
 /** Index of the last message: only that one can be regenerated. */
 const lastIndex = computed(() => messages.value.length - 1)
@@ -30,14 +45,29 @@ function renderedMarkdown(content: string) {
   return md.render(content)
 }
 
-function scrollToBottom() {
-  nextTick(() => messagesEl.value?.scrollTo({ top: messagesEl.value.scrollHeight, behavior: 'smooth' }))
+function onScroll() {
+  const el = messagesEl.value
+  if (!el) return
+  stickToBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+}
+
+function scrollToBottom(force = false) {
+  if (force) stickToBottom.value = true
+  if (!stickToBottom.value) return
+  nextTick(() =>
+    messagesEl.value?.scrollTo({
+      top: messagesEl.value.scrollHeight,
+      // Smooth scrolling on every streamed token would lag behind the text
+      behavior: loading.value ? 'auto' : 'smooth',
+    }),
+  )
 }
 
 async function send() {
   const question = userInput.value
   if (!question.trim() || loading.value) return
   userInput.value = ''
+  scrollToBottom(true)
   await chat.ask(question)
 }
 
@@ -53,274 +83,153 @@ async function copyMessage(index: number, text: string) {
   }
 }
 
-watch(messages, scrollToBottom, { deep: true })
+function onStyleChange(value: unknown) {
+  if (typeof value === 'string') selectedStyle.value = value
+}
+
+watch(messages, () => scrollToBottom(), { deep: true })
 
 onMounted(() => {
   isClipboardCopyingAvailable.value = !!navigator.clipboard?.writeText
   chat.init()
-  scrollToBottom()
+  scrollToBottom(true)
 })
 </script>
 
-
 <template>
-    <div class="container-fill d-flex flex-column  overflow-auto p-3 me-0  rounded-4 w-100 h-100">
-        <!-- Chat Messages -->
-        <div id="messages" ref="messagesEl" class="flex-grow-1 h-100 overflow-auto" style="scroll-behavior: smooth;">
+  <div class="container-fill chat flex h-full w-full flex-col overflow-hidden p-(--pad)">
+    <!-- Messages -->
+    <div id="messages" ref="messagesEl" class="app-scrollbar min-h-0 flex-1 overflow-y-auto" @scroll.passive="onScroll">
+      <!-- Empty state -->
+      <Empty v-if="visibleMessages.length === 0 && !loading" class="my-4">
+        <EmptyHeader>
+          <EmptyMedia variant="icon"><Brain aria-hidden="true" /></EmptyMedia>
+          <EmptyTitle>{{ t('chat.introTitle') }}</EmptyTitle>
+          <EmptyDescription>{{ t('chat.intro') }}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
 
-            <div v-for="message in visibleMessages" :key="message.index">
-                <div v-if="message.role === 'user'" class="d-flex mb-1 justify-content-end">
-                    <div class="p-3 px-4 rounded-4 ms-5" id="usermessage">
-                        <div class="text-break text-start message" v-html="md.render(message.content)"></div>
-
-                    </div>
-                </div>
-
-                <div v-else-if="message.role === 'assistant'" class="p-3 pe-4 rounded-4 me-5">
-                    <h6 class="mb-0">AI:</h6>
-                    <div class="text-break text-start message" v-html="renderedMarkdown(message.content)"></div>
-                    <!-- Action buttons (copy / retry) -->
-                    <div v-if="!loading && isClipboardCopyingAvailable " class="d-flex message-actions">
-                        <span v-if="copiedIndex !== message.index" class="material-icons-outlined p-2 fs-5" role="button" title="Copia"
-                            @click="copyMessage(message.index, message.content)">
-                            content_copy
-                        </span>
-                        <span v-else class="material-icons-outlined p-2 fs-5" role="button" title="Copiato!">
-                            check
-                        </span>
-                        <span v-if="message.index === lastIndex" class="material-icons-outlined p-2 fs-5" role="button" title="Rigenera"
-                            @click="chat.regenerate()">
-                            refresh
-                        </span>
-                    </div>
-                </div>
+      <div class="flex flex-col gap-4">
+        <template v-for="message in visibleMessages" :key="message.index">
+          <!-- User -->
+          <div v-if="message.role === 'user'" class="flex justify-end">
+            <div class="user-message ml-10 max-w-[85%] rounded-(--radius) bg-secondary px-4 py-2.5">
+              <div class="message text-break text-sm" v-html="md.render(message.content)"></div>
             </div>
-            <div v-if="loading" class="thinking-indicator p-3 pe-4 rounded-4 me-5">
-                <div class="text-break text-start ">
-                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                </div>
+          </div>
+
+          <!-- Failed answer -->
+          <Alert v-else-if="message.role === 'assistant' && message.error" variant="destructive" class="chat-error">
+            <CircleAlert aria-hidden="true" />
+            <AlertTitle>{{ t('chat.errorTitle') }}</AlertTitle>
+            <AlertDescription class="break-words">{{ message.content }}</AlertDescription>
+            <Button
+              v-if="message.index === lastIndex && !loading"
+              variant="outline"
+              size="sm"
+              class="col-span-2 mt-2 w-fit"
+              @click="chat.regenerate()"
+            >
+              <RefreshCw aria-hidden="true" />{{ t('common.retry') }}
+            </Button>
+          </Alert>
+
+          <!-- AI -->
+          <div v-else-if="message.role === 'assistant'" class="assistant-message mr-6">
+            <div class="mb-1 flex items-center gap-1.5 text-lime">
+              <Sparkles class="size-3.5" aria-hidden="true" />
+              <h6 class="panel-label text-lime! m-0">{{ t('chat.ai') }}</h6>
             </div>
+            <div class="message md-content text-break text-sm" v-html="renderedMarkdown(message.content)"></div>
+            <div v-if="!loading && isClipboardCopyingAvailable" class="message-actions mt-1 flex gap-1 text-muted-foreground">
+              <IconButton
+                v-if="copiedIndex !== message.index"
+                :label="t('chat.copy')"
+                size="icon-sm"
+                @click="copyMessage(message.index, message.content)"
+              >
+                <Copy aria-hidden="true" />
+              </IconButton>
+              <IconButton v-else :label="t('chat.copied')" size="icon-sm"><Check class="text-lime" aria-hidden="true" /></IconButton>
+              <IconButton v-if="message.index === lastIndex" :label="t('chat.regenerate')" size="icon-sm" @click="chat.regenerate()">
+                <RefreshCw aria-hidden="true" />
+              </IconButton>
+            </div>
+          </div>
+        </template>
+
+        <div v-if="loading" class="thinking-indicator flex items-center gap-2 text-sm text-muted-foreground" role="status">
+          <Spinner class="size-4 text-lime" aria-hidden="true" />
+          <span>{{ t('chat.thinking') }}</span>
         </div>
-
-        <!-- AI PC Status Indicator -->
-        <div class="ai-pc-status text-center mb-2">
-            <div v-if="checkingLocalBackend" class="d-flex justify-content-center align-items-center gap-2">
-                <span class="spinner-border spinner-border-sm text-warning" role="status" aria-hidden="true"></span>
-                <small class="text-warning">Checking local AI PC...</small>
-            </div>
-            <div v-else-if="isLocalBackendAvailable" class="d-flex justify-content-center align-items-center gap-2">
-                <div class="status-indicator status-online"></div>
-                <small class="text-success fw-bold">AI PC Enabled</small>
-                <button class="btn btn-sm p-1 ms-2 refresh-btn" 
-                        @click="chat.recheckBackend()" 
-                        title="Re-check local backend"
-                        :disabled="checkingLocalBackend">
-                    <span class="material-icons-outlined" style="font-size: 14px;">refresh</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- AI Content Disclaimer -->
-        <div class="disclaimer-text text-center mt-2 mb-2">
-            <small class="text-secondary">
-                AI-generated content may contain errors or inaccuracies. Please verify important information.
-            </small>
-        </div>
-
-        <div class="flex-shrink-0">
-            <div v-if="toAnalyse" class="flex-item">
-                <!-- Style Selector and Analyze Button - Horizontally Spaced -->
-                <div class="d-flex justify-content-center align-items-center gap-3 mb-3">
-                    <div class="d-flex flex-column align-items-center">
-                        <label for="style-selector" class="style-label mb-1">Analysis Style</label>
-                        <select id="style-selector" 
-                                v-model="selectedStyle" 
-                                class="form-select style-selector"
-                                aria-label="Analysis Style">
-                            <option v-for="style in analysisStyles" 
-                                    :key="style.value" 
-                                    :value="style.value">
-                                {{ style.label }}
-                            </option>
-                        </select>
-                    </div>
-                    
-                    <button type="button"
-                        class="btn btn-sm fs-4 text-black rounded rounded-4 custom-bg-primary px-5 py-3 fw-bold"
-                        @click="chat.analyze()">
-                        Analyze
-                    </button>
-                </div>
-            </div>
-            <input v-model="userInput" v-else @keyup.enter="send" id="input"
-                class="flex-item border rounded px-3 py-2 mt-2 w-100 text-white custom-box" placeholder="Ask Anything!"
-                autocomplete="off" />
-        </div>
+      </div>
     </div>
+
+    <!-- Backend status -->
+    <div class="ai-pc-status mt-2 flex items-center justify-center gap-2 border-b border-(--panel-divider) pb-2">
+      <Badge v-if="checkingLocalBackend" variant="outline" class="gap-1.5 text-warning">
+        <Spinner class="size-3" aria-hidden="true" />{{ t('chat.checkingBackend') }}
+      </Badge>
+      <template v-else>
+        <Badge variant="outline" class="gap-1.5" :class="isLocalBackendAvailable ? 'text-success' : 'text-muted-foreground'">
+          <span
+            class="size-1.5 rounded-full"
+            :class="isLocalBackendAvailable ? 'bg-success shadow-[0_0_6px_var(--success)]' : 'bg-muted-foreground'"
+            aria-hidden="true"
+          ></span>
+          {{ backend === 'local' ? t('chat.backendEnabled') : t('chat.backendRemote') }}
+        </Badge>
+        <IconButton :label="t('chat.recheckBackend')" size="icon-xs" @click="chat.recheckBackend()">
+          <RefreshCw aria-hidden="true" />
+        </IconButton>
+      </template>
+    </div>
+
+    <p class="disclaimer-text mt-2 text-center text-xs text-muted-foreground">{{ t('chat.disclaimer') }}</p>
+
+    <div class="mt-3 shrink-0">
+      <!-- Analyze -->
+      <div v-if="toAnalyse" class="flex flex-wrap items-end justify-center gap-3">
+        <div class="flex flex-col gap-1.5">
+          <Label for="style-selector" class="panel-label">{{ t('chat.style') }}</Label>
+          <Select :model-value="selectedStyle" @update:model-value="onStyleChange">
+            <SelectTrigger id="style-selector" class="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="style in analysisStyles" :key="style.value" :value="style.value">
+                {{ style.label }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button size="lg" class="h-10 px-6 text-base font-bold" @click="chat.analyze()">
+          <Sparkles aria-hidden="true" />{{ t('chat.analyze') }}
+        </Button>
+      </div>
+
+      <!-- Question -->
+      <InputGroup v-else>
+        <InputGroupInput
+          id="input"
+          v-model="userInput"
+          :placeholder="t('chat.placeholder')"
+          :aria-label="t('chat.inputLabel')"
+          autocomplete="off"
+          @keyup.enter="send"
+        />
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton
+            variant="default"
+            size="icon-xs"
+            :aria-label="t('chat.send')"
+            :disabled="loading || !userInput.trim()"
+            @click="send"
+          >
+            <SendHorizontal aria-hidden="true" />
+          </InputGroupButton>
+        </InputGroupAddon>
+      </InputGroup>
+    </div>
+  </div>
 </template>
-
-<style scoped>
-.message-actions {
-    color: #bbb;
-}
-
-.message-actions>span {
-    border-radius: 50%;
-}
-
-.message-actions>span:hover {
-    background-color: #ffffff1e;
-}
-
-.custom-box {
-    background-color: #2e2e2e;
-    border-color: #2e2e2e !important;
-    outline: none;
-}
-
-.custom-bg-primary {
-    border: 2px solid #aaa23a;
-}
-
-.custom-bg-primary:hover {
-    border: 2px solid #aaa23a;
-    background-color: transparent;
-    color: #aaa23a !important;
-}
-
-#input::placeholder {
-    color: #b2b2b2;
-}
-
-#usermessage {
-    background: #323232 !important;
-}
-
-.message>* {
-    margin: 0% !important;
-}
-
-.spinner-border,
-h6 {
-    color: #aaa23a;
-    /* Spinner color */
-}
-
-#messages {
-    overflow: auto;
-    max-height: 100%;
-    scrollbar-width: thin;
-    scrollbar-color: #888 transparent;
-}
-
-/* width */
-::-webkit-scrollbar {
-    width: 10px;
-}
-
-/* Track */
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-/* Handle */
-::-webkit-scrollbar-thumb {
-    background: #888;
-}
-
-/* Handle on hover */
-::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
-
-.disclaimer-text {
-    border-top: 1px solid #3a3a3a;
-    padding-top: 8px;
-}
-
-.disclaimer-text small {
-    font-size: 0.75rem;
-    opacity: 0.8;
-}
-
-.ai-pc-status {
-    border-bottom: 1px solid #3a3a3a;
-    padding-bottom: 8px;
-}
-
-.status-indicator {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    display: inline-block;
-}
-
-.status-online {
-    background-color: #28a745;
-    box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
-    animation: pulse 2s infinite;
-}
-
-.status-offline {
-    background-color: #6c757d;
-}
-
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
-    }
-    50% {
-        box-shadow: 0 0 16px rgba(40, 167, 69, 0.8);
-    }
-    100% {
-        box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
-    }
-}
-
-.refresh-btn {
-    background: none;
-    border: none;
-    color: #6c757d;
-    transition: color 0.2s ease;
-}
-
-.refresh-btn:hover:not(:disabled) {
-    color: #aaa23a;
-}
-
-.refresh-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.style-selector {
-    background-color: #2e2e2e;
-    border: 2px solid #aaa23a;
-    color: #fff;
-    border-radius: 8px;
-    padding: 8px 12px;
-    min-width: 150px;
-    max-width: 200px;
-    flex-shrink: 0;
-}
-
-.style-selector:focus {
-    background-color: #2e2e2e;
-    border-color: #aaa23a;
-    color: #fff;
-    box-shadow: 0 0 0 0.2rem rgba(170, 162, 58, 0.25);
-}
-
-.style-selector option {
-    background-color: #2e2e2e;
-    color: #fff;
-}
-
-.style-label {
-    color: #aaa23a;
-    font-size: 0.85rem;
-    font-weight: 600;
-    text-align: center;
-    margin: 0;
-}
-</style>

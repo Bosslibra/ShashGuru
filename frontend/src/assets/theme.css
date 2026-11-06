@@ -1,0 +1,82 @@
+/* Tailwind v4 theme: exposes the tokens from tokens.css as utilities (bg-card, text-olive, ...) */
+@custom-variant dark (&:is(.dark *));
+
+/* The generated shadcn-vue components use the Base UI boolean data attributes (data-open, data-checked...),
+   while Reka UI emits data-state="open|checked|...". These variants match both, so the classes always apply. */
+@custom-variant data-open (&:where([data-state='open'], [data-open]));
+@custom-variant data-closed (&:where([data-state='closed'], [data-closed]));
+@custom-variant data-checked (&:where([data-state='checked'], [data-checked]));
+@custom-variant data-unchecked (&:where([data-state='unchecked'], [data-unchecked]));
+@custom-variant data-active (&:where([data-state='active'], [data-active]));
+
+@theme static {
+  --font-sans: 'Inter Variable', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', 'Courier New', monospace;
+  --font-heading: var(--font-sans);
+}
+
+@theme inline {
+  /* shadcn semantic colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* ShashGuru brand palette */
+  --color-olive: var(--olive);
+  --color-lime: var(--lime);
+  --color-cream: var(--cream);
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-nav: var(--surface-nav);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-eval-1: var(--eval-1);
+  --color-eval-2: var(--eval-2);
+  --color-eval-3: var(--eval-3);
+  --color-eval-4: var(--eval-4);
+  --color-eval-5: var(--eval-5);
+  --color-eval-6: var(--eval-6);
+  --color-eval-7: var(--eval-7);
+
+  /* Radii follow --radius, which each visual direction sets */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}

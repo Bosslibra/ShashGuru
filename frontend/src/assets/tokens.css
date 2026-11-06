@@ -1,0 +1,73 @@
+/* ShashGuru palette and semantic tokens (dark only). The hex values are the brand colour coding:
+   olive / lime / cream accents on warm greys, plus the evaluation colours.
+   theme.css exposes them to Tailwind; directions/*.css set shape, density and texture. */
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --bg: #181818;
+  --surface-0: #1a1916;
+  --surface-1: #1c1c1c;
+  --surface-nav: #232323;
+  --surface-2: #262421;
+  --surface-3: #2f2d2a;
+
+  /* Borders */
+  --border: #3a3a3a;
+  --border-strong: #444;
+
+  /* Accents */
+  --olive: #aaa23a;
+  --lime: #cdd26a;
+  --cream: #e6e6b3;
+
+  /* Text */
+  --text-strong: #f2f2f2;
+  --text: #e8e8e8;
+  --text-muted: #b2b2b2;
+
+  /* Semantic */
+  --success: #629924;
+  --danger: #ff6b6b;
+  --warning: #ffc107;
+  --info: #17a2b8;
+
+  /* Evaluation colours: white winning (1) ... black winning (7) */
+  --eval-1: #4fc3f7;
+  --eval-2: #81c784;
+  --eval-3: #aed581;
+  --eval-4: #bdbdbd;
+  --eval-5: #ffab91;
+  --eval-6: #ff8a65;
+  --eval-7: #f48fb1;
+
+  --focus-ring: 2px solid var(--lime);
+  --transition: 150ms ease;
+  --navbar-h: 64px;
+
+  /* ---- shadcn-vue semantic tokens, mapped onto the palette ---- */
+  --radius: 6px;
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface-2);
+  --card-foreground: var(--text);
+  --popover: var(--surface-3);
+  --popover-foreground: var(--text);
+  --primary: var(--olive);
+  --primary-foreground: var(--bg);
+  --secondary: var(--surface-3);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-0);
+  --muted-foreground: var(--text-muted);
+  /* hover / selected surface: a faint lime tint, a brand touch instead of neutral grey */
+  --accent: color-mix(in srgb, var(--lime) 12%, var(--surface-3));
+  --accent-foreground: var(--text-strong);
+  --destructive: var(--danger);
+  --input: rgb(255 255 255 / 0.14);
+  --ring: var(--lime);
+  --chart-1: var(--eval-1);
+  --chart-2: var(--eval-2);
+  --chart-3: var(--eval-3);
+  --chart-4: var(--eval-5);
+  --chart-5: var(--eval-7);
+}

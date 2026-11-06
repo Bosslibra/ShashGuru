@@ -1,75 +1,89 @@
 <template>
-  <div class="evaluation-container">
-    <div class="evaluation-bar-wrapper" :class="{ 'disabled': !enabled, 'loading': loading && enabled }">
-      <div class="evaluation-bar" :class="{ 'flipped': boardOrientation === 'black' }">
+  <div class="evaluation-container flex h-full flex-col items-center gap-1">
+    <div
+      class="relative w-7 flex-1 overflow-hidden rounded-(--radius) border border-border bg-surface-nav sm:w-9"
+      :class="{ 'opacity-50': !enabled, 'opacity-60': loading && enabled }"
+    >
+      <div class="evaluation-bar relative flex h-full w-full flex-col-reverse">
         <template v-if="enabled">
-          <!-- Top section (black when white orientation, white when black orientation) -->
-          <div class="eval-section" :class="boardOrientation !== 'white' ? 'black-section' : 'white-section'"
-            :style="{ height: (boardOrientation !== 'white' ? blackPercentage : whitePercentage) + '%' }">
-            <div v-if="(boardOrientation !== 'white' ? blackPercentage : whitePercentage) > 15" class="eval-text"
-              :class="boardOrientation !== 'white' ? 'black-text' : 'white-text'">
+          <!-- First child sits at the bottom (flex-col-reverse): the side that is at the bottom of the board -->
+          <div
+            class="eval-section flex items-center justify-center transition-[height] duration-300"
+            :class="boardOrientation !== 'white' ? 'bg-linear-to-b from-[#1a1a1a] to-[#333]' : 'bg-linear-to-t from-[#f0f0f0] to-[#d0d0d0]'"
+            :style="{ height: (boardOrientation !== 'white' ? blackPercentage : whitePercentage) + '%' }"
+          >
+            <div
+              v-if="(boardOrientation !== 'white' ? blackPercentage : whitePercentage) > 15"
+              class="num rotate-180 text-[10px] font-bold [writing-mode:vertical-lr]"
+              :class="boardOrientation !== 'white' ? 'text-white' : 'text-black'"
+            >
               {{ formatEvaluation() }}
             </div>
           </div>
 
-          <!-- Bottom section (white when white orientation, black when black orientation) -->
-          <div class="eval-section" :class="boardOrientation !== 'white' ? 'white-section' : 'black-section'"
-            :style="{ height: (boardOrientation !== 'white' ? whitePercentage : blackPercentage) + '%' }">
-            <div v-if="(boardOrientation !== 'white' ? whitePercentage : blackPercentage) > 15" class="eval-text"
-              :class="boardOrientation !== 'white' ? 'white-text' : 'black-text'">
+          <div
+            class="eval-section flex items-center justify-center transition-[height] duration-300"
+            :class="boardOrientation !== 'white' ? 'bg-linear-to-t from-[#f0f0f0] to-[#d0d0d0]' : 'bg-linear-to-b from-[#1a1a1a] to-[#333]'"
+            :style="{ height: (boardOrientation !== 'white' ? whitePercentage : blackPercentage) + '%' }"
+          >
+            <div
+              v-if="(boardOrientation !== 'white' ? whitePercentage : blackPercentage) > 15"
+              class="num rotate-180 text-[10px] font-bold [writing-mode:vertical-lr]"
+              :class="boardOrientation !== 'white' ? 'text-black' : 'text-white'"
+            >
               {{ formatEvaluation() }}
             </div>
           </div>
         </template>
 
         <template v-else>
-          <!-- Disabled state - neutral position -->
-          <div class="eval-section black-section" style="height: 50%"></div>
-          <div class="eval-section white-section" style="height: 50%"></div>
+          <div class="h-1/2 bg-linear-to-b from-[#1a1a1a] to-[#333]"></div>
+          <div class="h-1/2 bg-linear-to-t from-[#f0f0f0] to-[#d0d0d0]"></div>
         </template>
       </div>
 
       <!-- Center line -->
-      <div class="center-line"></div>
+      <div class="absolute inset-x-0 top-1/2 z-10 h-0.5 -translate-y-1/2 bg-[#666]"></div>
 
-      <!-- Loading overlay -->
-      <div v-if="loading && enabled" class="loading-overlay">
-        <div class="spinner"></div>
+      <div v-if="loading && enabled" class="absolute inset-0 z-20 grid place-items-center bg-black/20">
+        <Spinner class="size-4 text-lime" />
       </div>
 
-      <!-- Disabled overlay -->
-      <div v-if="!enabled" class="disabled-overlay">
-        <span class="disabled-text">OFF</span>
+      <div v-if="!enabled" class="absolute inset-0 z-20 grid place-items-center bg-black/30">
+        <span class="text-[11px] font-bold tracking-wider text-muted-foreground [writing-mode:vertical-lr]">
+          {{ t('common.off') }}
+        </span>
       </div>
     </div>
 
-    <!-- Evaluation details -->
-    <div v-if="evaluation && enabled" class="evaluation-details">
-      <!-- <div class="best-move">
-        <span class="label">Best:</span> 
-        <span class="move">{{ evaluation.move }}</span>
-      </div> -->
-      <!-- <div v-if="evaluation.winprob !== null" class="win-probability">
-        Win: {{ Math.round(evaluation.winprob * 10) }}%
-      </div> -->
-    </div>
-
-    <!-- Error display -->
-    <div v-if="error && enabled" class="error-container">
-      <i class="material-icons" style="color: #ff6b6b;">error</i>
-      <div class="error-tooltip bg-danger">
-        {{ error }}
-      </div>
-    </div>
+    <!-- Evaluation error: focusable icon with a tooltip -->
+    <Tooltip v-if="error && enabled">
+      <TooltipTrigger as-child>
+        <button
+          type="button"
+          class="rounded-full p-0.5 text-destructive outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          :aria-label="t('engine.failed')"
+        >
+          <CircleAlert class="size-5" aria-hidden="true" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="right">{{ t('engine.failed') }}</TooltipContent>
+    </Tooltip>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useTranslation } from 'i18next-vue'
+import { CircleAlert } from '@lucide/vue'
+import { Spinner } from '@/components/ui/spinner'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { formatScore, scoreToPercent } from '@/lib/evalFormat'
 import { useEvaluationStore } from '@/stores/evaluation'
 import { useSettingsStore } from '@/stores/settings'
+
+const { t } = useTranslation()
 
 withDefaults(
   defineProps<{
@@ -101,205 +115,3 @@ const blackPercentage = computed(() => 100 - whitePercentage.value)
 const formatEvaluation = () =>
   bestLine.value ? formatScore(bestLine.value.score, whiteToMove.value) : ''
 </script>
-
-<style scoped>
-/* styles */
-.error-container {
-  position: relative;      /* important */
-  display: inline-block;   /* so hover works neatly around the icon */
-}
-
-.error-tooltip {
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  position: absolute;
-  z-index: 9999;           /* sit above surrounding UI */
-  bottom: 125%;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: #ff4444; /* avoid mixing with .bg-danger while testing */
-  color: #fff;
-  padding: 8px 10px;
-  border-radius: 4px;
-  white-space: nowrap;
-}
-
-.error-tooltip::after {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  margin-left: -5px;
-  border-width: 5px;
-  border-style: solid;
-  border-color: #ff4444 transparent transparent transparent;
-}
-
-.error-container:hover .error-tooltip {
-  visibility: visible;
-  opacity: 1;
-}
-
-
-.evaluation-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  padding: 5px;
-  height: 100%;
-}
-
-.evaluation-bar-wrapper {
-  position: relative;
-  width: 40px;
-  border: 2px solid #444;
-  border-radius: 4px;
-  overflow: hidden;
-  background-color: #222;
-  flex: 1;
-}
-
-.evaluation-bar-wrapper.disabled {
-  opacity: 0.5;
-}
-
-.evaluation-bar-wrapper.loading {
-  opacity: 0.6;
-}
-
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-  z-index: 20;
-}
-
-.disabled-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
-}
-
-.disabled-text {
-  color: #666;
-  font-size: 10px;
-  font-weight: bold;
-  writing-mode: vertical-lr;
-  text-orientation: mixed;
-}
-
-.evaluation-bar {
-  display: flex;
-  flex-direction: column-reverse;
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-
-.eval-section {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: height 0.3s ease;
-  position: relative;
-}
-
-.white-section {
-  background: linear-gradient(to top, #f0f0f0, #d0d0d0);
-}
-
-.black-section {
-  background: linear-gradient(to bottom, #1a1a1a, #333);
-}
-
-.eval-text {
-  font-size: 10px;
-  font-weight: bold;
-  writing-mode: vertical-lr;
-  text-orientation: mixed;
-  transform: rotate(180deg);
-}
-
-.white-text {
-  color: #000;
-}
-
-.black-text {
-  color: #fff;
-}
-
-.center-line {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background-color: #666;
-  transform: translateY(-50%);
-  z-index: 10;
-}
-
-.evaluation-details {
-  text-align: center;
-  font-size: 12px;
-  color: #f2f2f2;
-}
-
-.best-move {
-  margin-bottom: 5px;
-}
-
-.label {
-  color: #aaa;
-}
-
-.move {
-  font-weight: bold;
-  color: #cdd26a;
-}
-
-.win-probability {
-  color: #bbb;
-  font-size: 11px;
-}
-
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid #cdd26a;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.error-message {
-  color: #ff6b6b;
-  font-size: 11px;
-  text-align: center;
-}
-</style>

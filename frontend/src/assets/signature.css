@@ -1,0 +1,78 @@
+/* Signature elements of the ShashGuru look. They are shared by every visual direction and are
+   driven only by CSS variables, which directions/*.css set. */
+
+/* An analysis "instrument": bordered surface with optional texture */
+@utility panel {
+  position: relative;
+  background-color: var(--panel-bg);
+  background-image: var(--texture);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  box-shadow: var(--panel-shadow);
+  overflow: hidden;
+}
+
+/* Panel title bar: section label on the left, a value or actions on the right */
+@utility panel-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--spacing) * 3);
+  padding: var(--pad-sm) var(--pad);
+  border-bottom: 1px solid var(--panel-divider);
+
+  /* chessboard-pattern accent fading out to the left; opacity 0 in directions that do not use it */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: conic-gradient(var(--olive) 25%, transparent 0 50%, var(--olive) 0 75%, transparent 0);
+    background-size: 14px 14px;
+    opacity: var(--checker-opacity);
+    -webkit-mask-image: linear-gradient(to left, #000, transparent 65%);
+    mask-image: linear-gradient(to left, #000, transparent 65%);
+  }
+}
+
+/* Section label (ENGINE, MOVES, ...) */
+@utility panel-label {
+  text-transform: var(--label-transform);
+  font-size: var(--label-size);
+  letter-spacing: var(--label-tracking);
+  font-weight: var(--label-weight);
+  color: var(--label-color);
+  line-height: 1.2;
+}
+
+/* Numbers: notation font with tabular figures */
+@utility num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Evaluation / quality chip: colour it with text-eval-* and it tints itself */
+@utility eval-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  border-radius: calc(var(--radius) * 0.6);
+  background-color: color-mix(in srgb, currentColor 12%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+}
+
+/* Side panel on the Home page: fixed comfortable height on phones, as tall as the viewport on desktop */
+@utility panel-fill {
+  height: clamp(420px, 75dvh, 720px);
+
+  @media (min-width: 1024px) {
+    height: max(520px, calc(100dvh - var(--navbar-h) - 2 * var(--pad)));
+  }
+}
